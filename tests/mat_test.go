@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestZeros(t *testing.T) {
+func TestMatZeros(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 
 	for i := range m.Rows() {
@@ -20,7 +20,7 @@ func TestZeros(t *testing.T) {
 	}
 }
 
-func TestOnes(t *testing.T) {
+func TestMatOnes(t *testing.T) {
 	m := mat.Ones[float32](2, 2)
 
 	for i := range m.Rows() {
@@ -35,7 +35,7 @@ func TestOnes(t *testing.T) {
 	}
 }
 
-func TestARange(t *testing.T) {
+func TestMatARange(t *testing.T) {
 	m := mat.ARange[float32](4)
 	if val := m.At(0, 0); val != 0.0 {
 		t.Errorf("Expected value of 0.0, found: %f", val)
@@ -51,7 +51,7 @@ func TestARange(t *testing.T) {
 	}
 }
 
-func TestReshape(t *testing.T) {
+func TestMatReshape(t *testing.T) {
 	m1 := mat.ARange[float32](6)
 	m2, err := m1.Reshape(3, 2)
 	if err != nil {
@@ -114,7 +114,7 @@ func TestReshape(t *testing.T) {
 	}
 }
 
-func TestSetAt(t *testing.T) {
+func TestMatSetAt(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 	m.Set(0, 0, 1.0)
 	m.Set(0, 1, 2.0)
@@ -138,7 +138,7 @@ func TestSetAt(t *testing.T) {
 	}
 }
 
-func TestEquality(t *testing.T) {
+func TestMatEquality(t *testing.T) {
 	m1 := mat.ARange[float32](4).MustReshape(2, 2)
 	m2 := mat.ARange[float32](4).MustReshape(2, 2)
 	m3 := mat.ARange[float32](4)
@@ -164,7 +164,7 @@ func TestEquality(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestMatAdd(t *testing.T) {
 	m1 := mat.New2DF32(2, 2)
 	m2 := mat.Ones[float32](2, 2)
 
@@ -183,7 +183,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestMatMul(t *testing.T) {
+func TestMatMatMul(t *testing.T) {
 	A := mat.ARange[float32](4).MustReshape(2, 2)
 	B := mat.ARange[float32](4).MustReshape(2, 2)
 
