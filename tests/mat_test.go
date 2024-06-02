@@ -5,47 +5,7 @@ import (
 	"testing"
 )
 
-func TestMat(t *testing.T) {
-	testZeros(t)
-	testOnes(t)
-	testARange(t)
-	testEquality(t)
-	testReshape(t)
-	testSetAt(t)
-	testAdd(t)
-
-	testMatMul(t)
-}
-
-func testMatMul(t *testing.T) {
-	A := mat.ARange[float32](4).MustReshape(2, 2)
-	B := mat.ARange[float32](4).MustReshape(2, 2)
-
-	C, err := mat.MatMul(A, B)
-	if err != nil {
-		t.Fatalf("Failed MatMul test: %s", err)
-	}
-
-	/*
-		[0 1] [0 1] = [0*0+1*2  0*1+1*3] = [2  3]
-		[2 3] [2 3] = [2*0+3*2  2*1+3*3] = [6 11]
-	*/
-
-	if val := C.At(0, 0); val != 2 {
-		t.Errorf("Expected m[0,0]=2 found: %f", val)
-	}
-	if val := C.At(0, 1); val != 3 {
-		t.Errorf("Expected m[0,1]=3 found: %f", val)
-	}
-	if val := C.At(1, 0); val != 6 {
-		t.Errorf("Expected m[1,0]=6 found: %f", val)
-	}
-	if val := C.At(1, 1); val != 11 {
-		t.Errorf("Expected m[1,1]=11 found: %f", val)
-	}
-}
-
-func testZeros(t *testing.T) {
+func TestZeros(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 
 	for i := range m.Rows() {
@@ -60,7 +20,7 @@ func testZeros(t *testing.T) {
 	}
 }
 
-func testOnes(t *testing.T) {
+func TestOnes(t *testing.T) {
 	m := mat.Ones[float32](2, 2)
 
 	for i := range m.Rows() {
@@ -75,7 +35,7 @@ func testOnes(t *testing.T) {
 	}
 }
 
-func testARange(t *testing.T) {
+func TestARange(t *testing.T) {
 	m := mat.ARange[float32](4)
 	if val := m.At(0, 0); val != 0.0 {
 		t.Errorf("Expected value of 0.0, found: %f", val)
@@ -91,7 +51,7 @@ func testARange(t *testing.T) {
 	}
 }
 
-func testReshape(t *testing.T) {
+func TestReshape(t *testing.T) {
 	m1 := mat.ARange[float32](6)
 	m2, err := m1.Reshape(3, 2)
 	if err != nil {
@@ -154,7 +114,7 @@ func testReshape(t *testing.T) {
 	}
 }
 
-func testSetAt(t *testing.T) {
+func TestSetAt(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 	m.Set(0, 0, 1.0)
 	m.Set(0, 1, 2.0)
@@ -178,7 +138,7 @@ func testSetAt(t *testing.T) {
 	}
 }
 
-func testEquality(t *testing.T) {
+func TestEquality(t *testing.T) {
 	m1 := mat.ARange[float32](4).MustReshape(2, 2)
 	m2 := mat.ARange[float32](4).MustReshape(2, 2)
 	m3 := mat.ARange[float32](4)
@@ -204,7 +164,7 @@ func testEquality(t *testing.T) {
 	}
 }
 
-func testAdd(t *testing.T) {
+func TestAdd(t *testing.T) {
 	m1 := mat.New2DF32(2, 2)
 	m2 := mat.Ones[float32](2, 2)
 
@@ -220,5 +180,33 @@ func testAdd(t *testing.T) {
 		m2.At(1, 0) != m3.At(1, 0) ||
 		m2.At(1, 1) != m3.At(1, 1) {
 		t.Errorf("Expected m3 and m2 to both be Ones matrix")
+	}
+}
+
+func TestMatMul(t *testing.T) {
+	A := mat.ARange[float32](4).MustReshape(2, 2)
+	B := mat.ARange[float32](4).MustReshape(2, 2)
+
+	C, err := mat.MatMul(A, B)
+	if err != nil {
+		t.Fatalf("Failed MatMul test: %s", err)
+	}
+
+	/*
+		[0 1] [0 1] = [0*0+1*2  0*1+1*3] = [2  3]
+		[2 3] [2 3] = [2*0+3*2  2*1+3*3] = [6 11]
+	*/
+
+	if val := C.At(0, 0); val != 2 {
+		t.Errorf("Expected m[0,0]=2 found: %f", val)
+	}
+	if val := C.At(0, 1); val != 3 {
+		t.Errorf("Expected m[0,1]=3 found: %f", val)
+	}
+	if val := C.At(1, 0); val != 6 {
+		t.Errorf("Expected m[1,0]=6 found: %f", val)
+	}
+	if val := C.At(1, 1); val != 11 {
+		t.Errorf("Expected m[1,1]=11 found: %f", val)
 	}
 }
