@@ -29,7 +29,6 @@ func (m *Mat2D[T]) Cols() uint64 {
 
 func New2D[T Float](rows, cols uint64) *Mat2D[T] {
 	// TODO handle zero rows or cols
-
 	return &Mat2D[T]{
 		rows:   rows,
 		cols:   cols,
@@ -45,6 +44,18 @@ func New2DF32(rows, cols uint64) *Mat2D[float32] {
 
 func New2DF64(rows, cols uint64) *Mat2D[float64] {
 	return New2D[float64](rows, cols)
+}
+
+func FromValues[T Float](values []T) *Mat2D[T] {
+	N := uint64(len(values))
+
+	return &Mat2D[T]{
+		rows:   1,
+		cols:   N,
+		stride: N,
+
+		values: values,
+	}
 }
 
 func (m *Mat2D[T]) SliceMat(i, j, r, c uint64) (*Mat2D[T], error) {
@@ -106,31 +117,6 @@ func ARange[T Float](upto uint64) *Mat2D[T] {
 	return mat
 }
 
-func (m *Mat2D[T]) Reshape(rows, cols uint64) (*Mat2D[T], error) {
-	if !m.reshapable(rows, cols) {
-		err := fmt.Errorf(
-			"Invalid reshape[%d, %d] for M[%d, %d]",
-			rows, cols, m.rows, m.cols,
-		)
-		return nil, err
-	}
-
-	reshaped := m.Clone()
-	reshaped.rows = rows
-	reshaped.cols = cols
-	reshaped.stride = cols
-
-	return reshaped, nil
-}
-
-func (m *Mat2D[T]) MustReshape(rows, cols uint64) *Mat2D[T] {
-	res, err := m.Reshape(rows, cols)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return res
-}
-
 func (m *Mat2D[T]) At(i, j uint64) T {
 	index := (i)*(m).stride + (j)
 	return (m.values[index])
@@ -141,20 +127,24 @@ func (m *Mat2D[T]) Set(i, j uint64, val T) {
 	m.values[index] = val
 }
 
-func Equals[T Float](a, b *Mat2D[T]) bool {
-	if a.rows != b.rows || a.cols != b.cols {
-		return false
+func (m *Mat2D[T]) Reshape(rows, cols uint64) (*Mat2D[T], error) {
+	if err := m.mustBeReshapeable(rows, cols); err != nil {
+		return nil, err
 	}
 
-	for i := range a.rows {
-		for j := range b.cols {
-			if a.At(i, j) != b.At(i, j) {
-				return false
-			}
-		}
-	}
+	m.rows = rows
+	m.cols = cols
+	m.stride = cols
 
-	return true
+	return m, nil
+}
+
+func (m *Mat2D[T]) MustReshape(rows, cols uint64) *Mat2D[T] {
+	res, err := m.Reshape(rows, cols)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return res
 }
 
 func (m *Mat2D[T]) Stringify() (string, error) {
@@ -205,7 +195,7 @@ func (m *Mat2D[T]) PrintMat() {
 	fmt.Println(s)
 }
 
-func (m *Mat2D[T]) MutScale(sc T) {
+func (m *Mat2D[T]) Scale(sc T) {
 	for i := range m.rows {
 		for j := range m.cols {
 			m.Set(i, j, (m.At(i, j) * sc))
@@ -213,50 +203,53 @@ func (m *Mat2D[T]) MutScale(sc T) {
 	}
 }
 
-func (a *Mat2D[T]) MutAdd(b *Mat2D[T]) error {
-	if err := matchDims(a, b); err != nil {
+func (a *Mat2D[T]) Add(b *Mat2D[T]) error {
+	if err := add(a, a, b); err != nil {
 		return err
 	}
-
-	for i := range a.rows {
-		for j := range a.cols {
-			a.Set(i, j, (a.At(i, j) + b.At(i, j)))
-		}
-	}
-
 	return nil
 }
 
-func (m *Mat2D[T]) Scale(sc T) *Mat2D[T] {
-	res := m.Clone()
-	res.MutScale(sc)
-	return res
-}
-
-func MatAdd[T Float](dst, a, b *Mat2D[T]) (*Mat2D[T], error) {
-	if !DimsMatch(a, b) || !DimsMatch(dst, a) {
-		err := fmt.Errorf(
-			"Mismatched dimentions: d[%d, %d] = a[%d, %d] + b[%d, %d]",
-			dst.rows, dst.cols,
-			a.rows, a.cols,
-			b.rows, b.cols,
-		)
-		return nil, err
+func Equals[T Float](a, b *Mat2D[T]) bool {
+	if !DimsMatch(a, b) {
+		return false
 	}
 
-	res := a.Clone()
-	if err := res.MutAdd(b); err != nil {
-		return nil, err
+	for i := range a.rows {
+		for j := range b.cols {
+			if a.At(i, j) != b.At(i, j) {
+				return false
+			}
+		}
 	}
-	return res, nil
+
+	return true
 }
 
-func MatMul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+func Add[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+	dst := New2D[T](a.rows, a.cols)
+	if err := add(dst, a, b); err != nil {
+		return nil, err
+	}
+	return dst, nil
+}
+
+func Mul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 	if err := dimsCanMul(a, b); err != nil {
 		return nil, err
 	}
 
-	res := matMul(a, b)
+	// a.cols == b.rows
+	res := New2D[T](a.rows, b.cols)
+	for i := range res.rows {
+		for j := range res.cols {
+			var sum T = 0
+			for k := range b.rows {
+				sum += a.At(i, k) * b.At(k, j)
+			}
+			res.Set(i, j, sum)
+		}
+	}
 
 	return res, nil
 }
@@ -264,6 +257,8 @@ func MatMul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 func DimsMatch[T Float](a, b *Mat2D[T]) bool {
 	return a.rows == b.rows && a.cols == b.cols
 }
+
+// vvv PRIVATE vvv
 
 func matchDims[T Float](a, b *Mat2D[T]) error {
 	if !DimsMatch(a, b) {
@@ -288,25 +283,36 @@ func dimsCanMul[T Float](a, b *Mat2D[T]) error {
 	return nil
 }
 
-func matMul[T Float](a, b *Mat2D[T]) *Mat2D[T] {
-	if err := dimsCanMul(a, b); err != nil {
-		log.Fatal(err)
-	}
-
-	// a.cols == b.rows
-	res := New2D[T](a.rows, b.cols)
-	for i := range res.rows {
-		for j := range res.cols {
-			var sum T = 0
-			for k := range b.rows {
-				sum += a.At(i, k) * b.At(k, j)
-			}
-			res.Set(i, j, sum)
-		}
-	}
-	return res
-}
-
 func (m *Mat2D[T]) reshapable(rows, cols uint64) bool {
 	return m.rows*m.cols == rows*cols
+}
+
+func (m *Mat2D[T]) mustBeReshapeable(rows, cols uint64) error {
+	if !m.reshapable(rows, cols) {
+		err := fmt.Errorf(
+			"Invalid reshape[%d, %d] for M[%d, %d]",
+			rows, cols, m.rows, m.cols,
+		)
+		return err
+	}
+	return nil
+}
+
+func add[T Float](dst, a, b *Mat2D[T]) error {
+	if !(DimsMatch(a, b) && DimsMatch(dst, a)) {
+		return fmt.Errorf(
+			"Mismatched dims dst[%d, %d] = a[%d, %d] + b[%d, %d]",
+			dst.rows, dst.cols,
+			a.rows, a.cols,
+			b.rows, b.cols,
+		)
+	}
+
+	for i := range a.rows {
+		for j := range a.cols {
+			dst.Set(i, j, (a.At(i, j) + b.At(i, j)))
+		}
+	}
+
+	return nil
 }
