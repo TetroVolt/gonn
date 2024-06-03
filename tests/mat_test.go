@@ -11,10 +11,10 @@ func TestMatZeros(t *testing.T) {
 
 	for i := range m.Rows() {
 		for j := range m.Cols() {
-			if m.At(i, j) != 0 {
+			if m.MustGet(i, j) != 0 {
 				t.Errorf(
 					"Expected zero value, found: %f",
-					m.At(i, j),
+					m.MustGet(i, j),
 				)
 			}
 		}
@@ -26,10 +26,10 @@ func TestMatOnes(t *testing.T) {
 
 	for i := range m.Rows() {
 		for j := range m.Cols() {
-			if m.At(i, j) != 1.0 {
+			if m.MustGet(i, j) != 1.0 {
 				t.Errorf(
 					"Expected zero value, found: %f",
-					m.At(i, j),
+					m.MustGet(i, j),
 				)
 			}
 		}
@@ -38,9 +38,9 @@ func TestMatOnes(t *testing.T) {
 
 func TestMatARange(t *testing.T) {
 	m := mat.ARange[float32](4)
-	for i := range uint64(4) {
+	for i := range int64(4) {
 		expected := float32(i)
-		if val := m.At(0, i); val != expected {
+		if val := m.MustGet(0, i); val != expected {
 			t.Errorf("Expected value of %f, found: %f", expected, val)
 		}
 	}
@@ -86,7 +86,7 @@ func TestMatReshape(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 2, 5.0))
 }
 
-func TestMatSetAt(t *testing.T) {
+func TestMatSetGet(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 	m.Set(0, 0, 1.0)
 	m.Set(0, 1, 2.0)
@@ -97,6 +97,17 @@ func TestMatSetAt(t *testing.T) {
 	logIfErr(t, expectValueAt(m, 0, 1, 2.0))
 	logIfErr(t, expectValueAt(m, 1, 0, 3.0))
 	logIfErr(t, expectValueAt(m, 1, 1, 4.0))
+
+	// negative indices
+	m.Set(0, 0, 2.0)
+	m.Set(0, -1, 3.0)
+	m.Set(-1, 0, 4.0)
+	m.Set(-1, -1, 5.0)
+
+	logIfErr(t, expectValueAt(m, 0, 0, 2.0))
+	logIfErr(t, expectValueAt(m, 0, -1, 3.0))
+	logIfErr(t, expectValueAt(m, -1, 0, 4.0))
+	logIfErr(t, expectValueAt(m, -1, -1, 5.0))
 }
 
 func TestMatEquality(t *testing.T) {
@@ -105,10 +116,10 @@ func TestMatEquality(t *testing.T) {
 	m3 := mat.ARange[float32](4)
 	m4 := mat.Ones[float32](2, 2)
 
-	if m1.At(0, 0) != m2.At(0, 0) ||
-		m1.At(0, 1) != m2.At(0, 1) ||
-		m1.At(1, 0) != m2.At(1, 0) ||
-		m1.At(1, 1) != m2.At(1, 1) {
+	if m1.MustGet(0, 0) != m2.MustGet(0, 0) ||
+		m1.MustGet(0, 1) != m2.MustGet(0, 1) ||
+		m1.MustGet(1, 0) != m2.MustGet(1, 0) ||
+		m1.MustGet(1, 1) != m2.MustGet(1, 1) {
 		t.Fatal("Mismatched m1 and m2 using At")
 	}
 
@@ -190,15 +201,17 @@ func logIfErr(t *testing.T, err error) {
 	}
 }
 
-func expectValueAt[T mat.Float](m *mat.Mat2D[T], i, j uint64, expected T) error {
-	found := m.At(i, j)
-	if expected == found {
-		return nil
+func expectValueAt[T mat.Float](m *mat.Mat2D[T], i, j int64, expected T) error {
+	found, err := m.Get(i, j)
+
+	if err != nil || expected != found {
+		return fmt.Errorf(
+			"Expected value of %f at [%d, %d], found %f",
+			expected,
+			i, j,
+			found,
+		)
 	}
-	return fmt.Errorf(
-		"Expected value of %f at [%d, %d], found %f",
-		expected,
-		i, j,
-		found,
-	)
+
+	return nil
 }

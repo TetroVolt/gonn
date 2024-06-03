@@ -20,13 +20,10 @@ type Mat2D[T Float] struct {
 	transposed bool
 }
 
-func (m *Mat2D[T]) Rows() uint64 {
-	return m.rows
-}
-func (m *Mat2D[T]) Cols() uint64 {
-	return m.cols
-}
+type Mat2DF32 = Mat2D[float32]
+type Mat2DF64 = Mat2D[float64]
 
+// Constructors
 func New2D[T Float](rows, cols uint64) *Mat2D[T] {
 	// TODO handle zero rows or cols
 	return &Mat2D[T]{
@@ -38,12 +35,52 @@ func New2D[T Float](rows, cols uint64) *Mat2D[T] {
 	}
 }
 
-func New2DF32(rows, cols uint64) *Mat2D[float32] {
+func New2DF32(rows, cols uint64) *Mat2DF32 {
 	return New2D[float32](rows, cols)
 }
 
-func New2DF64(rows, cols uint64) *Mat2D[float64] {
+func New2DF64(rows, cols uint64) *Mat2DF64 {
 	return New2D[float64](rows, cols)
+}
+
+// End Constructors
+
+func (m *Mat2D[T]) Rows() int64 {
+	return int64(m.rows)
+}
+func (m *Mat2D[T]) Cols() int64 {
+	return int64(m.cols)
+}
+
+func (m *Mat2D[T]) Get(i, j int64) (T, error) {
+	index, err := m.valueIndex(i, j)
+	if err != nil {
+		return 0, err
+	}
+	return (m.values[index]), nil
+}
+
+func (m *Mat2D[T]) MustGet(i, j int64) T {
+	value, err := m.Get(i, j)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return value
+}
+
+func (m *Mat2D[T]) Set(i, j int64, val T) error {
+	index, err := m.valueIndex(i, j)
+	if err != nil {
+		return err
+	}
+	m.values[index] = val
+	return err
+}
+
+func (m *Mat2D[T]) MustSet(i, j int64, val T) {
+	if err := m.Set(i, j, val); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func FromValues[T Float](values []T) *Mat2D[T] {
@@ -61,7 +98,8 @@ func FromValues[T Float](values []T) *Mat2D[T] {
 func (m *Mat2D[T]) SliceMat(i, j, r, c uint64) (*Mat2D[T], error) {
 	if !(i < r && j < c && r <= m.rows && c <= m.cols) {
 		err := fmt.Errorf(
-			"Invalid matrix slice dims -> m[%d, %d], s[%d:%d, %d:%d]",
+			"Invalid matrix slice dims ->"+
+				"m[%d, %d], s[%d:%d, %d:%d]",
 			m.rows, m.cols,
 			i, i+r, j, j+c,
 		)
@@ -117,16 +155,6 @@ func ARange[T Float](upto uint64) *Mat2D[T] {
 	return mat
 }
 
-func (m *Mat2D[T]) At(i, j uint64) T {
-	index := (i)*(m).stride + (j)
-	return (m.values[index])
-}
-
-func (m *Mat2D[T]) Set(i, j uint64, val T) {
-	index := (i)*(m).stride + (j)
-	m.values[index] = val
-}
-
 func (m *Mat2D[T]) Reshape(rows, cols uint64) (*Mat2D[T], error) {
 	if err := m.mustBeReshapeable(rows, cols); err != nil {
 		return nil, err
@@ -151,15 +179,23 @@ func (m *Mat2D[T]) Stringify() (string, error) {
 	var builder strings.Builder
 
 	builder.WriteString("[\n")
-	for i := range m.rows {
+	for i := range m.Rows() {
 		builder.WriteString("\t[")
-		for j := range m.cols {
-			_, err := builder.WriteString(fmt.Sprintf("%f, ", m.At(i, j)))
 
+		for j := range m.Cols() {
+			val, err := m.Get(i, j)
+			if err != nil {
+				return "", err
+			}
+
+			_, err = builder.WriteString(
+				fmt.Sprintf("%f, ", val),
+			)
 			if err != nil {
 				return "", err
 			}
 		}
+
 		builder.WriteString("],\n")
 	}
 	builder.WriteString("]\n")
@@ -196,9 +232,9 @@ func (m *Mat2D[T]) PrintMat() {
 }
 
 func (m *Mat2D[T]) Scale(sc T) {
-	for i := range m.rows {
-		for j := range m.cols {
-			m.Set(i, j, (m.At(i, j) * sc))
+	for i := range m.Rows() {
+		for j := range m.Cols() {
+			m.Set(i, j, (m.MustGet(i, j) * sc))
 		}
 	}
 }
@@ -215,9 +251,9 @@ func Equals[T Float](a, b *Mat2D[T]) bool {
 		return false
 	}
 
-	for i := range a.rows {
-		for j := range b.cols {
-			if a.At(i, j) != b.At(i, j) {
+	for i := range a.Rows() {
+		for j := range b.Cols() {
+			if a.MustGet(i, j) != b.MustGet(i, j) {
 				return false
 			}
 		}
@@ -241,11 +277,11 @@ func Mul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 
 	// a.cols == b.rows
 	res := New2D[T](a.rows, b.cols)
-	for i := range res.rows {
-		for j := range res.cols {
+	for i := range res.Rows() {
+		for j := range res.Cols() {
 			var sum T = 0
-			for k := range b.rows {
-				sum += a.At(i, k) * b.At(k, j)
+			for k := range b.Rows() {
+				sum += a.MustGet(i, k) * b.MustGet(k, j)
 			}
 			res.Set(i, j, sum)
 		}
@@ -259,6 +295,36 @@ func DimsMatch[T Float](a, b *Mat2D[T]) bool {
 }
 
 // vvv PRIVATE vvv
+
+func (m *Mat2D[T]) posIndexes(i, j int64) (uint64, uint64, error) {
+	rows := m.Rows()
+	cols := m.Cols()
+
+	if i < -rows || i >= rows || j < -cols || j >= cols {
+		// index out of bounds
+		return 0, 0, fmt.Errorf(
+			"Index[%d, %d] out of bounds[%d, %d]",
+			i, j, rows, cols,
+		)
+	}
+
+	ii := uint64(((i % rows) + rows) % rows)
+	jj := uint64(((j % cols) + cols) % cols)
+
+	return ii, jj, nil
+}
+
+func (m *Mat2D[T]) valueIndex(i, j int64) (uint64, error) {
+	ii, jj, err := m.posIndexes(i, j)
+	if err != nil {
+		return 0, err
+	}
+	if m.transposed {
+		ii, jj = jj, ii
+	}
+	index := (ii)*(m).stride + (jj)
+	return index, nil
+}
 
 func matchDims[T Float](a, b *Mat2D[T]) error {
 	if !DimsMatch(a, b) {
@@ -308,9 +374,9 @@ func add[T Float](dst, a, b *Mat2D[T]) error {
 		)
 	}
 
-	for i := range a.rows {
-		for j := range a.cols {
-			dst.Set(i, j, (a.At(i, j) + b.At(i, j)))
+	for i := range a.Rows() {
+		for j := range a.Cols() {
+			dst.Set(i, j, (a.MustGet(i, j) + b.MustGet(i, j)))
 		}
 	}
 
