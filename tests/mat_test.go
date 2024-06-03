@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"gonn/internal/mat"
 	"testing"
 )
@@ -37,17 +38,11 @@ func TestMatOnes(t *testing.T) {
 
 func TestMatARange(t *testing.T) {
 	m := mat.ARange[float32](4)
-	if val := m.At(0, 0); val != 0.0 {
-		t.Errorf("Expected value of 0.0, found: %f", val)
-	}
-	if val := m.At(0, 1); val != 1.0 {
-		t.Errorf("Expected value of 1.0, found: %f", val)
-	}
-	if val := m.At(0, 2); val != 2.0 {
-		t.Errorf("Expected value of 2.0, found: %f", val)
-	}
-	if val := m.At(0, 3); val != 3.0 {
-		t.Errorf("Expected value of 3.0, found: %f", val)
+	for i := range uint64(4) {
+		expected := float32(i)
+		if val := m.At(0, i); val != expected {
+			t.Errorf("Expected value of %f, found: %f", expected, val)
+		}
 	}
 }
 
@@ -65,24 +60,12 @@ func TestMatReshape(t *testing.T) {
 		)
 	}
 
-	if val := m2.At(0, 0); val != 0.0 {
-		t.Errorf("Expected value of 0.0, found: %f", val)
-	}
-	if val := m2.At(0, 1); val != 1.0 {
-		t.Errorf("Expected value of 1.0, found: %f", val)
-	}
-	if val := m2.At(1, 0); val != 2.0 {
-		t.Errorf("Expected value of 2.0, found: %f", val)
-	}
-	if val := m2.At(1, 1); val != 3.0 {
-		t.Errorf("Expected value of 3.0, found: %f", val)
-	}
-	if val := m2.At(2, 0); val != 4.0 {
-		t.Errorf("Expected value of 4.0, found: %f", val)
-	}
-	if val := m2.At(2, 1); val != 5.0 {
-		t.Errorf("Expected value of 5.0, found: %f", val)
-	}
+	logIfErr(t, expectValueAt(m2, 0, 0, 0.0))
+	logIfErr(t, expectValueAt(m2, 0, 1, 1.0))
+	logIfErr(t, expectValueAt(m2, 1, 0, 2.0))
+	logIfErr(t, expectValueAt(m2, 1, 1, 3.0))
+	logIfErr(t, expectValueAt(m2, 2, 0, 4.0))
+	logIfErr(t, expectValueAt(m2, 2, 1, 5.0))
 
 	m3, err := m2.Reshape(2, 3)
 	if err != nil {
@@ -94,24 +77,13 @@ func TestMatReshape(t *testing.T) {
 			m3.Rows(), m3.Cols(),
 		)
 	}
-	if val := m3.At(0, 0); val != 0.0 {
-		t.Errorf("Expected value of 0.0, found: %f", val)
-	}
-	if val := m3.At(0, 1); val != 1.0 {
-		t.Errorf("Expected value of 1.0, found: %f", val)
-	}
-	if val := m3.At(0, 2); val != 2.0 {
-		t.Errorf("Expected value of 2.0, found: %f", val)
-	}
-	if val := m3.At(1, 0); val != 3.0 {
-		t.Errorf("Expected value of 3.0, found: %f", val)
-	}
-	if val := m3.At(1, 1); val != 4.0 {
-		t.Errorf("Expected value of 4.0, found: %f", val)
-	}
-	if val := m3.At(1, 2); val != 5.0 {
-		t.Errorf("Expected value of 5.0, found: %f", val)
-	}
+
+	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 1.0))
+	logIfErr(t, expectValueAt(m3, 0, 2, 2.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 3.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 4.0))
+	logIfErr(t, expectValueAt(m3, 1, 2, 5.0))
 }
 
 func TestMatSetAt(t *testing.T) {
@@ -121,21 +93,10 @@ func TestMatSetAt(t *testing.T) {
 	m.Set(1, 0, 3.0)
 	m.Set(1, 1, 4.0)
 
-	one := m.At(0, 0)
-	two := m.At(0, 1)
-	three := m.At(1, 0)
-	four := m.At(1, 1)
-
-	if one != 1.0 ||
-		two != 2.0 ||
-		three != 3.0 ||
-		four != 4.0 {
-
-		t.Errorf(
-			"Expected values to be: [1,2,3,4], found [%f, %f, %f, %f]",
-			one, two, three, four,
-		)
-	}
+	logIfErr(t, expectValueAt(m, 0, 0, 1.0))
+	logIfErr(t, expectValueAt(m, 0, 1, 2.0))
+	logIfErr(t, expectValueAt(m, 1, 0, 3.0))
+	logIfErr(t, expectValueAt(m, 1, 1, 4.0))
 }
 
 func TestMatEquality(t *testing.T) {
@@ -169,44 +130,75 @@ func TestMatAdd(t *testing.T) {
 	m2 := mat.Ones[float32](2, 2)
 
 	m3 := mat.New2DF32(2, 2)
-	m3, err := mat.MatAdd(m3, m1, m2)
+	m3, err := mat.Add(m1, m2)
 
 	if err != nil {
 		t.Fatalf("Error adding: %v\n", err)
 	}
 
-	if m2.At(0, 0) != m3.At(0, 0) ||
-		m2.At(0, 1) != m3.At(0, 1) ||
-		m2.At(1, 0) != m3.At(1, 0) ||
-		m2.At(1, 1) != m3.At(1, 1) {
-		t.Errorf("Expected m3 and m2 to both be Ones matrix")
+	logIfErr(t, expectValueAt(m3, 0, 0, 1.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 1.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 1.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 1.0))
+
+	if err := m3.Add(m3); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, 2.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 2.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 2.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 2.0))
+
+	if err := m3.Add(m3); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, 4.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 4.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 4.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 4.0))
+
+	m4 := mat.New2DF32(2, 1)
+	if err := m3.Add(m4); err == nil {
+		t.Error("Expected error when adding matrices with mismatched dims, none found")
 	}
 }
 
-func TestMatMatMul(t *testing.T) {
+func TestMatMul(t *testing.T) {
 	A := mat.ARange[float32](4).MustReshape(2, 2)
 	B := mat.ARange[float32](4).MustReshape(2, 2)
 
-	C, err := mat.MatMul(A, B)
+	C, err := mat.Mul(A, B)
 	if err != nil {
 		t.Fatalf("Failed MatMul test: %s", err)
 	}
 
 	/*
+		Expected behavior:
 		[0 1] [0 1] = [0*0+1*2  0*1+1*3] = [2  3]
 		[2 3] [2 3] = [2*0+3*2  2*1+3*3] = [6 11]
 	*/
+	logIfErr(t, expectValueAt(C, 0, 0, 2))
+	logIfErr(t, expectValueAt(C, 0, 1, 3))
+	logIfErr(t, expectValueAt(C, 1, 0, 6))
+	logIfErr(t, expectValueAt(C, 1, 1, 11))
+}
 
-	if val := C.At(0, 0); val != 2 {
-		t.Errorf("Expected m[0,0]=2 found: %f", val)
+func logIfErr(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Error(err)
 	}
-	if val := C.At(0, 1); val != 3 {
-		t.Errorf("Expected m[0,1]=3 found: %f", val)
+}
+
+func expectValueAt[T mat.Float](m *mat.Mat2D[T], i, j uint64, expected T) error {
+	found := m.At(i, j)
+	if expected == found {
+		return nil
 	}
-	if val := C.At(1, 0); val != 6 {
-		t.Errorf("Expected m[1,0]=6 found: %f", val)
-	}
-	if val := C.At(1, 1); val != 11 {
-		t.Errorf("Expected m[1,1]=11 found: %f", val)
-	}
+	return fmt.Errorf(
+		"Expected value of %f at [%d, %d], found %f",
+		expected,
+		i, j,
+		found,
+	)
 }
