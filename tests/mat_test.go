@@ -6,6 +6,74 @@ import (
 	"testing"
 )
 
+func TestSlicedTranspose(t *testing.T) {
+	m1 := mat.FromValues([]float32{
+		1.0, 2.0, 3.0,
+		4.0, 5.0, 6.0,
+		7.0, 8.0, 9.0,
+	}).MustReshape(3, 3)
+
+	m2, err := m1.Slice(mat.SR{0, 3}, mat.SR{0, 2})
+	if err != nil {
+		t.Fatalf("Failed to slice matrix: %s", err)
+	}
+	m2 = m2.TP()
+
+	expected := mat.FromValues([]float32{
+		1.0, 4.0, 7.0,
+		2.0, 5.0, 8.0,
+	}).MustReshape(2, 3)
+
+	if !mat.Equals(expected, m2) {
+		t.Errorf(
+			"Invalid transpose,\n"+
+				"expected:\n%s\n"+
+				"found:\n%s\n",
+
+			expected.MustStringify(),
+			m2.MustStringify(),
+		)
+	}
+}
+
+func TestTranspose(t *testing.T) {
+	m1 := mat.FromValues([]float32{
+		1.0, 2.0, 3.0,
+		4.0, 5.0, 6.0,
+	}).MustReshape(2, 3)
+
+	m2 := m1.Clone().TP()
+	expected := mat.FromValues([]float32{
+		1.0, 4.0,
+		2.0, 5.0,
+		3.0, 6.0,
+	}).MustReshape(3, 2)
+
+	if !mat.Equals(expected, m2) {
+		t.Errorf(
+			"Invalid transpose,\n"+
+				"expected:\n%s\n"+
+				"found:\n%s\n",
+
+			expected.MustStringify(),
+			m2.MustStringify(),
+		)
+	}
+
+	m3 := m2.TP().TP()
+	if !mat.Equals(m3, m2) {
+		t.Errorf(
+			"Invalid transpose,\n"+
+				"expected:\n%s\n"+
+				"found:\n%s\n",
+
+			m3.MustStringify(),
+			m2.MustStringify(),
+		)
+	}
+
+}
+
 func TestSlice(t *testing.T) {
 	m1 := mat.FromValues([]float32{
 		1.0, 2.0, 3.0,

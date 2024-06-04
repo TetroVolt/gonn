@@ -56,6 +56,21 @@ func FromValues[T Float](values []T) *Mat2D[T] {
 	}
 }
 
+func (m *Mat2D[T]) TP() *Mat2D[T] {
+	return m.Transpose()
+}
+
+func (m *Mat2D[T]) Transpose() *Mat2D[T] {
+	return &Mat2D[T]{
+		transposed: !m.transposed,
+		rows:       m.cols,
+		cols:       m.rows,
+		stride:     m.stride,
+
+		values: m.values,
+	}
+}
+
 // End Constructors
 
 func (m *Mat2D[T]) Rows() int64 {
@@ -103,12 +118,6 @@ type MatSlice struct {
 	R SliceRange
 	C SliceRange
 }
-
-// func MS(R, C SR) *MatSlice {
-// 	return &MatSlice{
-// 		R: R, C: C,
-// 	}
-// }
 
 func (m *Mat2D[T]) Slice(RS, CS SliceRange) (*Mat2D[T], error) {
 	rsl, csl, err := m.validateMS(RS, CS)
