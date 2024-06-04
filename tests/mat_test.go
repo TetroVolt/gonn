@@ -6,6 +6,32 @@ import (
 	"testing"
 )
 
+func TestSliceAndClone(t *testing.T) {
+	m0 := mat.FromValues([]float32{
+		1.0, 2.0, 3.0,
+		4.0, 5.0, 6.0,
+		7.0, 8.0, 9.0,
+	})
+
+	m1 := m0.MustReshape(3, 3)
+
+	m2, err := m1.Slice(mat.SR{0, 3}, mat.SR{0, 2})
+	if err != nil {
+		t.Fatalf("Failed to slice matrix: %s", err)
+	}
+	m3 := m2.Clone()
+
+	if !mat.Equals(m2, m3) {
+		t.Errorf(
+			"Expected clones to match,\n"+
+				"expected:\n%s\n"+
+				"found:\n%s\n",
+			m2.MustStringify(),
+			m3.MustStringify(),
+		)
+	}
+}
+
 func TestSlicedTranspose(t *testing.T) {
 	m1 := mat.FromValues([]float32{
 		1.0, 2.0, 3.0,

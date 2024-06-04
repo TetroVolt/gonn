@@ -26,13 +26,13 @@ type Mat2DF64 = Mat2D[float64]
 
 // Constructors
 func New2D[T Float](rows, cols uint64) *Mat2D[T] {
-	// TODO handle zero rows or cols
 	return &Mat2D[T]{
 		rows:   rows,
 		cols:   cols,
 		stride: cols,
 
-		values: make([]T, rows*cols),
+		transposed: false,
+		values:     make([]T, rows*cols),
 	}
 }
 
@@ -52,7 +52,8 @@ func FromValues[T Float](values []T) *Mat2D[T] {
 		cols:   N,
 		stride: N,
 
-		values: values,
+		transposed: false,
+		values:     values,
 	}
 }
 
@@ -169,8 +170,7 @@ func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
 		stride: m.stride,
 
 		transposed: m.transposed,
-
-		values: m.values[startIndex:],
+		values:     m.values[startIndex:],
 	}
 
 	return &submat, nil
@@ -178,15 +178,18 @@ func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
 
 func (m *Mat2D[T]) Clone() *Mat2D[T] {
 	clone := Mat2D[T]{
-		rows:   m.rows,
-		cols:   m.cols,
-		stride: m.stride,
+		rows:       m.rows,
+		cols:       m.cols,
+		stride:     m.cols,
+		transposed: m.transposed,
 
-		values: make([]T, len(m.values)),
+		values: make([]T, m.rows*m.cols),
 	}
 
-	for i := range len(m.values) {
-		clone.values[i] = m.values[i]
+	for i := range clone.Rows() {
+		for j := range clone.Cols() {
+			clone.MustSet(i, j, m.MustGet(i, j))
+		}
 	}
 
 	return &clone
@@ -271,10 +274,7 @@ func (m *Mat2D[T]) MustStringify() string {
 func (m *Mat2D[T]) String() string {
 	return fmt.Sprintf(
 		"%#v",
-		&Mat2D[T]{
-			rows: m.rows,
-			cols: m.cols,
-		},
+		m,
 	)
 }
 
