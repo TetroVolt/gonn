@@ -128,6 +128,28 @@ func TestSlice(t *testing.T) {
 			m2.MustStringify(),
 		)
 	}
+
+	m3, err := m1.Slice(mat.SR{0, 3}, mat.SR{2, 3})
+	if err != nil {
+		t.Fatalf("Failed to slice matrix: %s", err)
+	}
+
+	expected = mat.FromValues([]float32{
+		3.0,
+		6.0,
+		9.0,
+	}).MustReshape(3, 1)
+
+	if !mat.Equals(expected, m3) {
+		t.Errorf(
+			"Invalid slice,\n"+
+				"expected:\n%s\n"+
+				"found:\n%s\n",
+
+			expected.MustStringify(),
+			m3.MustStringify(),
+		)
+	}
 }
 
 func TestCat(t *testing.T) {

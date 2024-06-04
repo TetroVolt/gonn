@@ -138,8 +138,8 @@ func (m *Mat2D[T]) Slice(RS, CS SliceRange) (*Mat2D[T], error) {
 	return slicedMat, nil
 }
 
-func (m *Mat2D[T]) MustSlice(i, j, r, c uint64) *Mat2D[T] {
-	sl, err := m.slice(i, j, r, c)
+func (m *Mat2D[T]) MustSlice(RS, CS SR) *Mat2D[T] {
+	sl, err := m.Slice(RS, CS)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -147,7 +147,10 @@ func (m *Mat2D[T]) MustSlice(i, j, r, c uint64) *Mat2D[T] {
 }
 
 func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
-	if !(i < r && j < c && r <= m.rows && c <= m.cols) {
+	// i and j determine start location
+	// r and c are how much to take
+
+	if !(i+r <= m.rows && j+c <= m.cols) {
 		err := fmt.Errorf(
 			"Invalid matrix slice dims ->"+
 				"m[%d, %d], s[%d:%d, %d:%d]",
