@@ -10,11 +10,13 @@ My primary motivation in writing this was to learn GO (I am still a novice in GO
 
 My goal was **NOT** to not build a performant production ready GO ML framework.
 
-This was just for fun and to sanity check my understanding of basic Neural Networks, backpropagation, and optimizer algorithms.
+This was written just for fun and to sanity check my understanding of
+basic Neural Networks, backpropagation, and optimizer algorithms.
 
 ## Milestones
-[ ] (WIP) Basic Matrix library 
-[ ] (Not Started) Abtract graph NN module
+
+- [ ] (WIP) Basic Matrix library 
+- [ ] (Not Started) Abtract graph NN module
 
 ## Running
 This is a work in progress. So far only a small forward perceptron demo (no training yet) exists in `main.go`
