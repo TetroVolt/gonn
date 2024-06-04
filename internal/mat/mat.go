@@ -95,7 +95,15 @@ func FromValues[T Float](values []T) *Mat2D[T] {
 	}
 }
 
-func (m *Mat2D[T]) SliceMat(i, j, r, c uint64) (*Mat2D[T], error) {
+func (m *Mat2D[T]) MustSlice(i, j, r, c uint64) *Mat2D[T] {
+	sl, err := m.Slice(i, j, r, c)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return sl
+}
+
+func (m *Mat2D[T]) Slice(i, j, r, c uint64) (*Mat2D[T], error) {
 	if !(i < r && j < c && r <= m.rows && c <= m.cols) {
 		err := fmt.Errorf(
 			"Invalid matrix slice dims ->"+
@@ -231,12 +239,14 @@ func (m *Mat2D[T]) PrintMat() {
 	fmt.Println(s)
 }
 
-func (m *Mat2D[T]) Scale(sc T) {
+func (m *Mat2D[T]) Scale(sc T) *Mat2D[T] {
 	for i := range m.Rows() {
 		for j := range m.Cols() {
-			m.Set(i, j, (m.MustGet(i, j) * sc))
+			m.MustSet(i, j, (m.MustGet(i, j) * sc))
 		}
 	}
+
+	return m
 }
 
 func (a *Mat2D[T]) Add(b *Mat2D[T]) error {
@@ -294,7 +304,105 @@ func DimsMatch[T Float](a, b *Mat2D[T]) bool {
 	return a.rows == b.rows && a.cols == b.cols
 }
 
+func VCat[T Float](matrices ...(*Mat2D[T])) (*Mat2D[T], error) {
+	rows, cols, err := dimsCanVCat(matrices...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := New2D[T](rows, cols)
+
+	currRow := int64(0)
+	for _, mat := range matrices {
+
+		// Copy the matrix
+		for i := range mat.Rows() {
+			for j := range mat.Cols() {
+				// TODO figure out if copy(dst, src) is faster
+				//   -> need to figure out how to deal with transposed
+
+				value := mat.MustGet(i, j)
+				res.MustSet(currRow+i, j, value)
+			}
+		}
+
+		currRow += mat.Rows()
+	}
+
+	return res, nil
+}
+
+func HCat[T Float](matrices ...(*Mat2D[T])) (*Mat2D[T], error) {
+	rows, cols, err := dimsCanHCat(matrices...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := New2D[T](rows, cols)
+
+	currCol := int64(0)
+	for _, mat := range matrices {
+
+		// Copy the matrix
+		for i := range mat.Rows() {
+			for j := range mat.Cols() {
+				// TODO figure out if copy(dst, src) is faster
+				//   -> need to figure out how to deal with transposed
+
+				value := mat.MustGet(i, j)
+				res.MustSet(i, currCol+j, value)
+			}
+		}
+
+		currCol += mat.Cols()
+	}
+
+	return res, nil
+}
+
 // vvv PRIVATE vvv
+
+func dimsCanHCat[T Float](matrices ...(*Mat2D[T])) (rows, cols uint64, err error) {
+	cols = 0
+	rows = matrices[0].rows
+
+	for _, mat := range matrices {
+		if mat.Rows() != matrices[0].Rows() {
+			return 0, 0, fmt.Errorf(
+				"Cannot horizontally cat matrix, mismatched columns: %s, %s",
+				matrices[0].stringifyRowCol(),
+				mat.stringifyRowCol(),
+			)
+		} else {
+			cols += uint64(mat.Cols())
+		}
+	}
+
+	return rows, cols, nil
+}
+
+func dimsCanVCat[T Float](matrices ...(*Mat2D[T])) (rows, cols uint64, err error) {
+	rows = 0
+	cols = matrices[0].cols
+
+	for _, mat := range matrices {
+		if mat.Cols() != matrices[0].Cols() {
+			return 0, 0, fmt.Errorf(
+				"Cannot vertically cat matrix, mismatched columns: %s, %s",
+				matrices[0].stringifyRowCol(),
+				mat.stringifyRowCol(),
+			)
+		} else {
+			rows += uint64(mat.Rows())
+		}
+	}
+
+	return rows, cols, nil
+}
+
+func (m *Mat2D[T]) stringifyRowCol() string {
+	return fmt.Sprintf("[%d, %d]", m.Rows(), m.Cols())
+}
 
 func (m *Mat2D[T]) posIndexes(i, j int64) (uint64, uint64, error) {
 	rows := m.Rows()
@@ -329,9 +437,9 @@ func (m *Mat2D[T]) valueIndex(i, j int64) (uint64, error) {
 func matchDims[T Float](a, b *Mat2D[T]) error {
 	if !DimsMatch(a, b) {
 		err := fmt.Errorf(
-			"Error! Mismatched rows or cols [%d, %d]!=[%d, %d]",
-			a.rows, a.cols,
-			b.rows, b.cols,
+			"Error! Mismatched rows or cols %s != %s",
+			a.stringifyRowCol(),
+			b.stringifyRowCol(),
 		)
 		return err
 	}
@@ -341,9 +449,9 @@ func matchDims[T Float](a, b *Mat2D[T]) error {
 func dimsCanMul[T Float](a, b *Mat2D[T]) error {
 	if b.rows != a.cols {
 		return fmt.Errorf(
-			"Error! Invalid dims for AB mat mult: A[%d, %d] B[%d, %d]",
-			a.rows, a.cols,
-			b.rows, b.cols,
+			"Error! Invalid dims for AB mat mult: A%s B%s",
+			a.stringifyRowCol(),
+			b.stringifyRowCol(),
 		)
 	}
 	return nil
@@ -367,10 +475,10 @@ func (m *Mat2D[T]) mustBeReshapeable(rows, cols uint64) error {
 func add[T Float](dst, a, b *Mat2D[T]) error {
 	if !(DimsMatch(a, b) && DimsMatch(dst, a)) {
 		return fmt.Errorf(
-			"Mismatched dims dst[%d, %d] = a[%d, %d] + b[%d, %d]",
-			dst.rows, dst.cols,
-			a.rows, a.cols,
-			b.rows, b.cols,
+			"Mismatched dims dst%s = a%s + b%s",
+			dst.stringifyRowCol(),
+			a.stringifyRowCol(),
+			b.stringifyRowCol(),
 		)
 	}
 

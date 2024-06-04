@@ -6,6 +6,75 @@ import (
 	"testing"
 )
 
+func TestCat(t *testing.T) {
+	m1 := mat.FromValues([]float32{
+		1.0,
+	})
+
+	// VCat
+	m2, err := mat.VCat(m1, m1, m1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !mat.Equals(mat.Ones[float32](3, 1), m2) {
+		t.Errorf("Expected Twos[3, 1], found:\n%s", m2.MustStringify())
+	}
+
+	// HCat
+	m3, err := mat.HCat(m2, m2.Clone().Scale(2.0), m2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedMat := mat.FromValues([]float32{
+		1.0, 2.0, 1.0,
+		1.0, 2.0, 1.0,
+		1.0, 2.0, 1.0,
+	}).MustReshape(3, 3)
+
+	if !mat.Equals(expectedMat, m3) {
+		t.Errorf(
+			"Expected:\n%s, found:\n%s",
+			expectedMat.MustStringify(),
+			m3.MustStringify(),
+		)
+	}
+
+	// test expected failure
+	if _, err = mat.VCat(
+		/*
+			[1.0, 1.0]
+			[[1.0,
+			  1.0]]
+			[1.0, 1.0]
+		*/
+
+		mat.Ones[float32](1, 2),
+		mat.Ones[float32](2, 1),
+		mat.Ones[float32](1, 2),
+	); err == nil {
+		t.Fatalf(
+			"Expected error when VCat [1,2] [2,1] [1,2], found None",
+		)
+	}
+
+	if _, err = mat.HCat(
+		/*
+			[1.0, 1.0] [[1.0,  [1.0, 1.0]
+					     1.0]]
+		*/
+
+		mat.Ones[float32](1, 2),
+		mat.Ones[float32](2, 1),
+		mat.Ones[float32](1, 2),
+	); err == nil {
+		t.Fatalf(
+			"Expected error when HCat [1,2] [2,1] [1,2], found None",
+		)
+	}
+}
+
 func TestMatZeros(t *testing.T) {
 	m := mat.New2DF32(2, 2)
 
