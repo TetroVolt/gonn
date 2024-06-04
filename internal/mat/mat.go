@@ -20,6 +20,7 @@ type Mat2D[T Float] struct {
 	transposed bool
 }
 
+// Aliases
 type Mat2DF32 = Mat2D[float32]
 type Mat2DF64 = Mat2D[float64]
 
@@ -41,6 +42,18 @@ func New2DF32(rows, cols uint64) *Mat2DF32 {
 
 func New2DF64(rows, cols uint64) *Mat2DF64 {
 	return New2D[float64](rows, cols)
+}
+
+func FromValues[T Float](values []T) *Mat2D[T] {
+	N := uint64(len(values))
+
+	return &Mat2D[T]{
+		rows:   1,
+		cols:   N,
+		stride: N,
+
+		values: values,
+	}
 }
 
 // End Constructors
@@ -83,27 +96,47 @@ func (m *Mat2D[T]) MustSet(i, j int64, val T) {
 	}
 }
 
-func FromValues[T Float](values []T) *Mat2D[T] {
-	N := uint64(len(values))
+type SliceRange = [2]int64
+type SR = SliceRange
 
-	return &Mat2D[T]{
-		rows:   1,
-		cols:   N,
-		stride: N,
+type MatSlice struct {
+	R SliceRange
+	C SliceRange
+}
 
-		values: values,
+// func MS(R, C SR) *MatSlice {
+// 	return &MatSlice{
+// 		R: R, C: C,
+// 	}
+// }
+
+func (m *Mat2D[T]) Slice(RS, CS SliceRange) (*Mat2D[T], error) {
+	rsl, csl, err := m.validateMS(RS, CS)
+
+	if err != nil {
+		return nil, err
 	}
+
+	i, j := uint64(rsl[0]), uint64(csl[0])
+	rows, cols := uint64(rsl[1])-i, uint64(csl[1])-j
+
+	slicedMat, err := m.slice(i, j, rows, cols)
+	if err != nil {
+		return nil, err
+	}
+
+	return slicedMat, nil
 }
 
 func (m *Mat2D[T]) MustSlice(i, j, r, c uint64) *Mat2D[T] {
-	sl, err := m.Slice(i, j, r, c)
+	sl, err := m.slice(i, j, r, c)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return sl
 }
 
-func (m *Mat2D[T]) Slice(i, j, r, c uint64) (*Mat2D[T], error) {
+func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
 	if !(i < r && j < c && r <= m.rows && c <= m.cols) {
 		err := fmt.Errorf(
 			"Invalid matrix slice dims ->"+
@@ -115,11 +148,18 @@ func (m *Mat2D[T]) Slice(i, j, r, c uint64) (*Mat2D[T], error) {
 		return nil, err
 	}
 
-	startIndex := (i)*(m).stride + (j)
+	// startIndex := (i)*(m).stride + (j)
+	startIndex, err := m.valueIndex(int64(i), int64(j))
+	if err != nil {
+		return nil, err
+	}
+
 	submat := Mat2D[T]{
 		rows:   r,
 		cols:   c,
 		stride: m.stride,
+
+		transposed: m.transposed,
 
 		values: m.values[startIndex:],
 	}
@@ -249,6 +289,13 @@ func (m *Mat2D[T]) Scale(sc T) *Mat2D[T] {
 	return m
 }
 
+func (a *Mat2D[T]) MustAdd(b *Mat2D[T]) *Mat2D[T] {
+	if err := add(a, a, b); err != nil {
+		log.Fatal(err)
+	}
+	return a
+}
+
 func (a *Mat2D[T]) Add(b *Mat2D[T]) error {
 	if err := add(a, a, b); err != nil {
 		return err
@@ -362,6 +409,72 @@ func HCat[T Float](matrices ...(*Mat2D[T])) (*Mat2D[T], error) {
 
 // vvv PRIVATE vvv
 
+func (m *Mat2D[T]) validateEndSlice(rEnd, cEnd int64) (uint64, uint64, error) {
+	var rE, cE uint64
+
+	if rEnd == m.Rows() {
+		rE = m.rows
+	} else if -m.Rows() < rEnd && rEnd < m.Rows() {
+		rE = uint64(
+			(((rEnd % m.Rows()) + m.Rows()) % m.Rows()),
+		)
+	} else {
+		return 0, 0, fmt.Errorf(
+			"Invalid endSlice[:%d,:%d] for M%s, end row value %d out of bounds. ",
+			rEnd, cEnd,
+			m.stringifyRowCol(),
+			rEnd,
+		)
+	}
+
+	if cEnd == m.Cols() {
+		cE = m.cols
+	} else if -m.Cols() < cEnd && cEnd < m.Cols() {
+		cE = uint64(
+			(((cEnd % m.Cols()) + m.Cols()) % m.Cols()),
+		)
+	} else {
+		return 0, 0, fmt.Errorf(
+			"Invalid endSlice[:%d,:%d] for M%s, end col value %d out of bounds. ",
+			rEnd, cEnd,
+			m.stringifyRowCol(),
+			cEnd,
+		)
+	}
+
+	return rE, cE, nil
+}
+
+func (m *Mat2D[T]) validateMS(R, C SR) (rSlice SR, cSlice SR, err error) {
+	rStart, rEnd := R[0], R[1]
+	cStart, cEnd := C[0], C[1]
+
+	rS, cS, err := m.posIndexes(rStart, cStart)
+	if err != nil {
+		return SR{}, SR{}, err
+	}
+
+	rE, cE, err := m.validateEndSlice(rEnd, cEnd)
+	if err != nil {
+		return SR{}, SR{}, fmt.Errorf(
+			"Invalid slice[%v, %v] for M%s, reason: %s",
+			R, C, m.stringifyRowCol(),
+			err,
+		)
+	}
+
+	if !(rS < rE && cS < cE) {
+		return SR{}, SR{}, fmt.Errorf(
+			"Invalid Slice [%v, %v] for %s", R, C, m.stringifyRowCol(),
+		)
+	}
+
+	rSlice = SR{int64(rS), int64(rE)}
+	cSlice = SR{int64(cS), int64(cE)}
+	err = nil
+	return
+}
+
 func dimsCanHCat[T Float](matrices ...(*Mat2D[T])) (rows, cols uint64, err error) {
 	cols = 0
 	rows = matrices[0].rows
@@ -405,8 +518,7 @@ func (m *Mat2D[T]) stringifyRowCol() string {
 }
 
 func (m *Mat2D[T]) posIndexes(i, j int64) (uint64, uint64, error) {
-	rows := m.Rows()
-	cols := m.Cols()
+	rows, cols := m.Rows(), m.Cols()
 
 	if i < -rows || i >= rows || j < -cols || j >= cols {
 		// index out of bounds
