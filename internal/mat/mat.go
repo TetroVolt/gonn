@@ -168,10 +168,10 @@ func (m *Mat2D[T]) Clone() *Mat2D[T] {
 	return &clone
 }
 
-func (m *Mat2D[T]) Apply(app func(T) T) *Mat2D[T] {
+func (m *Mat2D[T]) Apply(f func(T) T) *Mat2D[T] {
 	for i := range m.Rows() {
 		for j := range m.Cols() {
-			val := app(m.MustGet(i, j))
+			val := f(m.MustGet(i, j))
 			m.MustSet(i, j, val)
 		}
 	}

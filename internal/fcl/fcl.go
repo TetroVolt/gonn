@@ -3,7 +3,6 @@ package fcl
 import (
 	"fmt"
 	"gonn/internal/mat"
-	"math"
 )
 
 type FullyConnectedLayer struct {
@@ -11,7 +10,7 @@ type FullyConnectedLayer struct {
 	I  *mat.Mat2DF32 // Input
 	W  *mat.Mat2DF32 // weights
 	Wx *mat.Mat2DF32 // Weighted Input
-	Ac *mat.Mat2DF32 // Activated Weighted Input, aka. Output
+	O  *mat.Mat2DF32 // Activated Weighted Input, aka. Output
 
 	iSize, oSize uint64
 }
@@ -26,7 +25,7 @@ func NewFCL(iSize, oSize uint64) *FCL {
 		I:  nil,
 		W:  W,
 		Wx: nil,
-		Ac: nil,
+		O:  nil,
 
 		iSize: iSize, oSize: oSize,
 	}
@@ -43,12 +42,12 @@ func (fcl *FCL) GetOSize() uint64 {
 }
 
 func (fcl *FCL) GetOutput() (*mat.Mat2DF32, error) {
-	if fcl.Ac == nil {
+	if fcl.O == nil {
 		return nil, fmt.Errorf(
 			"Cannot get FCL Output because output is nil",
 		)
 	}
-	return fcl.Ac, nil
+	return fcl.O, nil
 }
 
 func (fcl *FCL) Forward(
@@ -65,27 +64,18 @@ func (fcl *FCL) Forward(
 		return nil, err
 	}
 
-	Ac := Wx.Clone().Apply(ac)
+	O := Wx.Clone().Apply(ac)
 
 	fcl.I = I
 	fcl.Wx = Wx
-	fcl.Ac = Ac
+	fcl.O = O
 
-	return Ac, nil
+	return O, nil
 }
 
 func (fcl *FCL) Backward(loss *mat.Mat2DF32) error {
-	panic("Not implemented yet. ")
-}
+	panic("TODO Not implemented yet. ")
 
-func Sigmoid(x float32) float32 {
-	exp := float32(math.Exp(float64(-x)))
-	return 1 / (1 + exp)
-}
-
-func DSigmoid(x float32) float32 {
-	sv := Sigmoid(x)
-	return sv * (1 - sv)
 }
 
 // ## private ##

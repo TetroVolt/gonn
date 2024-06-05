@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestApply(t *testing.T) {
+	m1 := mat.ARange[float32](9).MustReshape(3, 3)
+	m2 := m1.Clone()
+
+	m2.Apply(func(x float32) float32 { return x + 1 })
+	m2.Apply(func(x float32) float32 { return x - 1 })
+
+	logIfErr(t, expectMatEq(m1, m2))
+}
+
 func TestSliceAndClone(t *testing.T) {
 	m0 := mat.FromValues([]float32{
 		1.0, 2.0, 3.0,
@@ -21,15 +31,7 @@ func TestSliceAndClone(t *testing.T) {
 	}
 	m3 := m2.Clone()
 
-	if !mat.Equals(m2, m3) {
-		t.Errorf(
-			"Expected clones to match,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
-			m2.MustStringify(),
-			m3.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(m2, m3))
 }
 
 func TestSlicedTranspose(t *testing.T) {
@@ -50,16 +52,7 @@ func TestSlicedTranspose(t *testing.T) {
 		2.0, 5.0, 8.0,
 	}).MustReshape(2, 3)
 
-	if !mat.Equals(expected, m2) {
-		t.Errorf(
-			"Invalid transpose,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
-
-			expected.MustStringify(),
-			m2.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(expected, m2))
 }
 
 func TestTranspose(t *testing.T) {
@@ -75,29 +68,11 @@ func TestTranspose(t *testing.T) {
 		3.0, 6.0,
 	}).MustReshape(3, 2)
 
-	if !mat.Equals(expected, m2) {
-		t.Errorf(
-			"Invalid transpose,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
-
-			expected.MustStringify(),
-			m2.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(expected, m2))
 
 	m3 := m2.TP().TP()
-	if !mat.Equals(m3, m2) {
-		t.Errorf(
-			"Invalid transpose,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
 
-			m3.MustStringify(),
-			m2.MustStringify(),
-		)
-	}
-
+	logIfErr(t, expectMatEq(m3, m2))
 }
 
 func TestSlice(t *testing.T) {
@@ -118,16 +93,7 @@ func TestSlice(t *testing.T) {
 		7.0, 8.0,
 	}).MustReshape(3, 2)
 
-	if !mat.Equals(expected, m2) {
-		t.Errorf(
-			"Invalid slice,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
-
-			expected.MustStringify(),
-			m2.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(expected, m2))
 
 	m3, err := m1.Slice(mat.SR{0, 3}, mat.SR{2, 3})
 	if err != nil {
@@ -140,16 +106,7 @@ func TestSlice(t *testing.T) {
 		9.0,
 	}).MustReshape(3, 1)
 
-	if !mat.Equals(expected, m3) {
-		t.Errorf(
-			"Invalid slice,\n"+
-				"expected:\n%s\n"+
-				"found:\n%s\n",
-
-			expected.MustStringify(),
-			m3.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(expected, m3))
 }
 
 func TestCat(t *testing.T) {
@@ -179,13 +136,7 @@ func TestCat(t *testing.T) {
 		1.0, 2.0, 1.0,
 	}).MustReshape(3, 3)
 
-	if !mat.Equals(expectedMat, m3) {
-		t.Errorf(
-			"Expected:\n%s, found:\n%s",
-			expectedMat.MustStringify(),
-			m3.MustStringify(),
-		)
-	}
+	logIfErr(t, expectMatEq(expectedMat, m3))
 
 	// test expected failure
 	if _, err = mat.VCat(
@@ -414,6 +365,19 @@ func logIfErr(t *testing.T, err error) {
 	if err != nil {
 		t.Error(err)
 	}
+}
+
+func expectMatEq[T mat.Float](m1, m2 *mat.Mat2D[T]) error {
+	if mat.Equals(m1, m2) {
+		return nil
+	}
+	return fmt.Errorf(
+		"Expected matrices to match,\n"+
+			"expected:\n%s\n"+
+			"found:\n%s\n",
+		m1.MustStringify(),
+		m2.MustStringify(),
+	)
 }
 
 func expectValueAt[T mat.Float](m *mat.Mat2D[T], i, j int64, expected T) error {

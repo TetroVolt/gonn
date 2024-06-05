@@ -2,6 +2,7 @@ package demos
 
 import (
 	"fmt"
+	"gonn/internal/acti"
 	"gonn/internal/fcl"
 	"gonn/internal/mat"
 	"log"
@@ -31,22 +32,24 @@ func PerceptronDemo() {
 	L2 := fcl.NewFCL(2, 2)
 	L3 := fcl.NewFCL(2, 1)
 
-	O1, err := L1.Forward(X.TP(), fcl.Sigmoid)
+	O1, err := L1.Forward(X.TP(), acti.Sigmoid)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	O2, err := L2.Forward(O1, fcl.Sigmoid)
+	O2, err := L2.Forward(O1, acti.Sigmoid)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	y_, err := L3.Forward(O2, fcl.Sigmoid)
+	y_, err := L3.Forward(O2, acti.Sigmoid)
 
 	yy_, err := mat.HCat(X, y, y_.TP())
 	if err != nil {
 		fmt.Printf(
-			"Error! Failed to HCat [X , y , y_].\n%s\n%s\n%s",
+			"Error! Failed to HCat [X , y , y_]."+
+				"\n%s\n%s\n%s",
+
 			fmt.Sprintf(
 				"X:\n%s\n",
 				X.MustStringify(),
