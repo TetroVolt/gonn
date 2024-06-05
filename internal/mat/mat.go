@@ -3,6 +3,7 @@ package mat
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 )
 
@@ -114,14 +115,16 @@ func (m *Mat2D[T]) MustSet(i, j int64, val T) {
 
 type SliceRange = [2]int64
 type SR = SliceRange
+type RS = SliceRange // Row Slice alias
+type CS = SliceRange // Col Slice alias
 
 type MatSlice struct {
 	R SliceRange
 	C SliceRange
 }
 
-func (m *Mat2D[T]) Slice(RS, CS SliceRange) (*Mat2D[T], error) {
-	rsl, csl, err := m.validateMS(RS, CS)
+func (m *Mat2D[T]) Slice(rs, cs SliceRange) (*Mat2D[T], error) {
+	rsl, csl, err := m.validateMS(rs, cs)
 
 	if err != nil {
 		return nil, err
@@ -138,45 +141,12 @@ func (m *Mat2D[T]) Slice(RS, CS SliceRange) (*Mat2D[T], error) {
 	return slicedMat, nil
 }
 
-func (m *Mat2D[T]) MustSlice(RS, CS SR) *Mat2D[T] {
-	sl, err := m.Slice(RS, CS)
+func (m *Mat2D[T]) MustSlice(rs, cs SliceRange) *Mat2D[T] {
+	sl, err := m.Slice(rs, cs)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return sl
-}
-
-func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
-	// i and j determine start location
-	// r and c are how much to take
-
-	if !(i+r <= m.rows && j+c <= m.cols) {
-		err := fmt.Errorf(
-			"Invalid matrix slice dims ->"+
-				"m[%d, %d], s[%d:%d, %d:%d]",
-			m.rows, m.cols,
-			i, i+r, j, j+c,
-		)
-
-		return nil, err
-	}
-
-	// startIndex := (i)*(m).stride + (j)
-	startIndex, err := m.valueIndex(int64(i), int64(j))
-	if err != nil {
-		return nil, err
-	}
-
-	submat := Mat2D[T]{
-		rows:   r,
-		cols:   c,
-		stride: m.stride,
-
-		transposed: m.transposed,
-		values:     m.values[startIndex:],
-	}
-
-	return &submat, nil
 }
 
 func (m *Mat2D[T]) Clone() *Mat2D[T] {
@@ -198,13 +168,44 @@ func (m *Mat2D[T]) Clone() *Mat2D[T] {
 	return &clone
 }
 
+func (m *Mat2D[T]) Apply(app func(T) T) *Mat2D[T] {
+	for i := range m.Rows() {
+		for j := range m.Cols() {
+			val := app(m.MustGet(i, j))
+			m.MustSet(i, j, val)
+		}
+	}
+	return m
+}
+
+func (m *Mat2D[T]) Fill(val T) *Mat2D[T] {
+	for i := range m.Rows() {
+		for j := range m.Cols() {
+			m.MustSet(i, j, val)
+		}
+	}
+	return m
+}
+
 func Ones[T Float](rows, cols uint64) *Mat2D[T] {
 	mat := New2D[T](rows, cols)
+	mat.Fill(T(1.0))
+	return mat
+}
 
+func RandF32(rows, cols uint64) *Mat2DF32 {
+	mat := New2DF32(rows, cols)
 	for i := range len(mat.values) {
-		mat.values[i] = 1.0
+		mat.values[i] = rand.Float32()
 	}
+	return mat
+}
 
+func RandF64(rows, cols uint64) *Mat2DF64 {
+	mat := New2DF64(rows, cols)
+	for i := range len(mat.values) {
+		mat.values[i] = rand.Float64()
+	}
 	return mat
 }
 
@@ -375,11 +376,11 @@ func VCat[T Float](matrices ...(*Mat2D[T])) (*Mat2D[T], error) {
 	for _, mat := range matrices {
 
 		// Copy the matrix
+		// TODO figure out if copy(dst, src) is faster
+		//   -> need to figure out how to deal with transposed
+
 		for i := range mat.Rows() {
 			for j := range mat.Cols() {
-				// TODO figure out if copy(dst, src) is faster
-				//   -> need to figure out how to deal with transposed
-
 				value := mat.MustGet(i, j)
 				res.MustSet(currRow+i, j, value)
 			}
@@ -613,4 +614,37 @@ func add[T Float](dst, a, b *Mat2D[T]) error {
 	}
 
 	return nil
+}
+
+func (m *Mat2D[T]) slice(i, j, r, c uint64) (*Mat2D[T], error) {
+	// i and j determine start location
+	// r and c are how much to take
+
+	if !(i+r <= m.rows && j+c <= m.cols) {
+		err := fmt.Errorf(
+			"Invalid matrix slice dims ->"+
+				"m[%d, %d], s[%d:%d, %d:%d]",
+			m.rows, m.cols,
+			i, i+r, j, j+c,
+		)
+
+		return nil, err
+	}
+
+	// startIndex := (i)*(m).stride + (j)
+	startIndex, err := m.valueIndex(int64(i), int64(j))
+	if err != nil {
+		return nil, err
+	}
+
+	submat := Mat2D[T]{
+		rows:   r,
+		cols:   c,
+		stride: m.stride,
+
+		transposed: m.transposed,
+		values:     m.values[startIndex:],
+	}
+
+	return &submat, nil
 }
