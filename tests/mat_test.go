@@ -10,7 +10,7 @@ func TestIdenRand(t *testing.T) {
 	mr := mat.Rand[float32](3, 3)
 	I := mat.Id[float32](3)
 
-	Imr, err := mat.Mul(I, mr)
+	Imr, err := mat.MatMul(I, mr)
 	if err != nil {
 		t.Fatal("Failed to multiply I x mr")
 	}
@@ -443,13 +443,13 @@ func TestMatSubtract(t *testing.T) {
 	}
 }
 
-func TestMatDot(t *testing.T) {
+func TestMatMul(t *testing.T) {
 	m1 := mat.ARange[float32](4).MustReshape(2, 2)
 	m2 := mat.Ones[float32](2, 2).Scale(2)
 
 	m3 := mat.New2DF32(2, 2)
 
-	m3, err := mat.Dot(m1, m2)
+	m3, err := mat.Mul(m1, m2)
 	if err != nil {
 		t.Fatalf("Error dotting: %v\n", err)
 	}
@@ -459,7 +459,7 @@ func TestMatDot(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 0, 4.0))
 	logIfErr(t, expectValueAt(m3, 1, 1, 6.0))
 
-	if err := m3.Dot(m3); err != nil {
+	if err := m3.Mul(m3); err != nil {
 		t.Fatal(err)
 	}
 	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
@@ -467,7 +467,7 @@ func TestMatDot(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 0, 16.0))
 	logIfErr(t, expectValueAt(m3, 1, 1, 36.0))
 
-	if err := m3.Dot(m3); err != nil {
+	if err := m3.Mul(m3); err != nil {
 		t.Fatal(err)
 	}
 	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
@@ -476,16 +476,16 @@ func TestMatDot(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 1, 36.0*36.0))
 
 	m4 := mat.New2DF32(2, 1)
-	if err := m3.Dot(m4); err == nil {
+	if err := m3.Mul(m4); err == nil {
 		t.Error("Expected error when dotting matrices with mismatched dims, none found")
 	}
 }
 
-func TestMatMul(t *testing.T) {
+func TestMatMatMul(t *testing.T) {
 	A := mat.ARange[float32](4).MustReshape(2, 2)
 	B := mat.ARange[float32](4).MustReshape(2, 2)
 
-	C, err := mat.Mul(A, B)
+	C, err := mat.MatMul(A, B)
 	if err != nil {
 		t.Fatalf("Failed MatMul test: %s", err)
 	}

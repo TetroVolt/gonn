@@ -18,7 +18,7 @@ func MatDemo() {
 	fmt.Println(m2.String())
 	fmt.Println(m2.MustStringify())
 
-	m3, err := mat.Mul(m1, m2)
+	m3, err := mat.MatMul(m1, m2)
 	if err != nil {
 		log.Fatal(err)
 	}

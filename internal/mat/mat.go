@@ -150,14 +150,8 @@ func (m *Mat2D[T]) MustSlice(rs, cs SliceRange) *Mat2D[T] {
 }
 
 func (m *Mat2D[T]) Clone() *Mat2D[T] {
-	clone := Mat2D[T]{
-		rows:       m.rows,
-		cols:       m.cols,
-		stride:     m.cols,
-		transposed: m.transposed,
-
-		values: make([]T, m.rows*m.cols),
-	}
+	rows, cols := uint64(m.Rows()), uint64(m.Cols())
+	clone := New2D[T](rows, cols)
 
 	for i := range clone.Rows() {
 		for j := range clone.Cols() {
@@ -165,7 +159,7 @@ func (m *Mat2D[T]) Clone() *Mat2D[T] {
 		}
 	}
 
-	return &clone
+	return clone
 }
 
 func (m *Mat2D[T]) Apply(f func(T) T) *Mat2D[T] {
@@ -338,15 +332,15 @@ func (a *Mat2D[T]) Subtract(b *Mat2D[T]) error {
 	return nil
 }
 
-func (a *Mat2D[T]) MustDot(b *Mat2D[T]) *Mat2D[T] {
+func (a *Mat2D[T]) MustMul(b *Mat2D[T]) *Mat2D[T] {
 	if err := subtract(a, a, b); err != nil {
 		log.Fatal(err)
 	}
 	return a
 }
 
-func (a *Mat2D[T]) Dot(b *Mat2D[T]) error {
-	if err := dot(a, a, b); err != nil {
+func (a *Mat2D[T]) Mul(b *Mat2D[T]) error {
+	if err := mul(a, a, b); err != nil {
 		return err
 	}
 	return nil
@@ -384,15 +378,39 @@ func Subtract[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 	return dst, nil
 }
 
-func Dot[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+func Mul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 	dst := New2D[T](a.rows, a.cols)
-	if err := dot(dst, a, b); err != nil {
+	if err := mul(dst, a, b); err != nil {
 		return nil, err
 	}
 	return dst, nil
 }
 
-func Mul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+func MustAdd[T Float](a, b *Mat2D[T]) *Mat2D[T] {
+	a, err := Subtract(a, b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return a
+}
+
+func MustSubtract[T Float](a, b *Mat2D[T]) *Mat2D[T] {
+	difference, err := Subtract(a, b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return difference
+}
+
+func MustMul[T Float](a, b *Mat2D[T]) *Mat2D[T] {
+	dot, err := Mul(a, b)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return dot
+}
+
+func MatMul[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 	if err := dimsCanMul(a, b); err != nil {
 		return nil, err
 	}
@@ -724,7 +742,7 @@ func add[T Float](dst, a, b *Mat2D[T]) error {
 	return nil
 }
 
-func dot[T Float](dst, a, b *Mat2D[T]) error {
+func mul[T Float](dst, a, b *Mat2D[T]) error {
 	if err := validateDimsMatch(dst, a, b); err != nil {
 		return err
 	}

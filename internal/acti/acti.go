@@ -5,22 +5,43 @@ import (
 	"math"
 )
 
+func NewAF[T mat.Float](
+	af func(x T) T,
+) *(func(x T) T) {
+	f := &af
+	return f
+}
+
 func Linear[T mat.Float](x T) T {
 	return x
 }
 
-func RELU[T mat.Float](x T) T {
+func ReLU[T mat.Float](x T) T {
 	if x > 0 {
 		return x
 	}
 	return 0
 }
 
-func DRELU[T mat.Float](x T) T {
+func DReLU[T mat.Float](x T) T {
 	if x > 0 {
 		return 1
 	}
 	return 0
+}
+
+func LReLU[T mat.Float](x T) T { // Leaky RELU
+	if x > 0 {
+		return x
+	}
+	return 0.01 * x
+}
+
+func DLReLU[T mat.Float](x T) T { // Leaky RELU
+	if x > 0 {
+		return 1
+	}
+	return -0.01
 }
 
 func Sigmoid[T mat.Float](x T) T {
