@@ -34,13 +34,12 @@ func PerceptronDemo() {
 	fmt.Printf("y:\n%s\n", y.MustStringify())
 
 	const ALPHA = 0.1
-	for range 10000 {
+	for range 100000 {
 		y_, err := forward(modelLayers, X)
 		if err != nil {
 			log.Fatalf("Failed to forward model, reason = { %s }", err)
 		}
 
-		//*
 		se, err := lossfuncs.SquaredError(y, y_)
 		if err != nil {
 			log.Fatalf("Failed to get SquaredError, reason { %s }", err)
@@ -52,21 +51,6 @@ func PerceptronDemo() {
 			log.Fatalf("Failed to get DSquaredError, reason { %s }", err)
 		}
 		_, err = backward(modelLayers, dse)
-
-		/*/
-		ce, err := lossfuncs.CrossEntropy(y, y_)
-		if err != nil {
-			log.Fatalf("Failed to get CrossEntropy, reason { %s }", err)
-		}
-		fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(y_.Cols()))
-		dce, err := lossfuncs.DCrossEntropy(y, y_)
-		if err != nil {
-			log.Fatalf("Failed to get DCrossEntropy, reason { %s }", err)
-		}
-
-		_, err = backward(modelLayers, dce)
-		//*/
-
 		if err != nil {
 			log.Fatalf("Failed to get BackProp, reason { %s }", err)
 		}
@@ -83,6 +67,11 @@ func PerceptronDemo() {
 	}
 
 	stats(X, y, y_)
+	ce, err := lossfuncs.CrossEntropy(y, y_)
+	if err != nil {
+		log.Fatalf("Failed to get CrossEntropy, reason { %s }", err)
+	}
+	fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(ce.Cols()))
 }
 
 func updateWeights(model []layer.Layer[float32], alpha float32) error {
@@ -172,27 +161,20 @@ func createModel() []layer.Layer[float32] {
 	// Instantiate Activation Functions
 	sigmoid := acti.NewAF[float32](acti.Sigmoid)
 	dSigmoid := acti.NewAF[float32](acti.DSigmoid)
-	// leakyRelu := acti.NewAF[float32](acti.LReLU)
-	// dLeakyRelu := acti.NewAF[float32](acti.DReLU)
 
 	// Instantiate Layers
 	modelLayers := []layer.Layer[float32]{
-		layer.NewLL[float32](2, 4),
+		layer.NewLL[float32](2, 2),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](4, 4),
+		layer.NewLL[float32](2, 2),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](4, 4),
-		layer.NewAL(
-			sigmoid,
-			dSigmoid,
-		),
-		layer.NewLL[float32](4, 1),
+		layer.NewLL[float32](2, 1),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
