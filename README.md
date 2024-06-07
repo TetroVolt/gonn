@@ -13,7 +13,7 @@ My goal was **NOT** to not build a performant production ready GO ML framework.
 This was written just for fun and to sanity check my understanding of
 basic Neural Networks, backpropagation, and optimizer algorithms. 
 
-And to learn the basics about Go error handling, modules, and unit tests.
+And to learn the basics about Go error handling, packages, and unit tests.
 
 ## Milestones
 
@@ -22,7 +22,7 @@ And to learn the basics about Go error handling, modules, and unit tests.
 - [ ] (Not Started) Abtract graph NN module
 
 ## Running
-This is a work in progress. So far only a small forward perceptron demo (no training yet) exists in `main.go`
+This is a work in progress. So far only a small XOR perceptron demo exists called from `main.go`
 This project uses a [Makefile](https://www.gnu.org/software/make/manual/make.html)
 
 ### Running main
