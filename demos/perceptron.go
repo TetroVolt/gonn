@@ -34,32 +34,39 @@ func PerceptronDemo() {
 	fmt.Printf("y:\n%s\n", y.MustStringify())
 
 	const ALPHA = 0.1
-	for range 100000 {
+	for range 10000 {
 		y_, err := forward(modelLayers, X)
 		if err != nil {
 			log.Fatalf("Failed to forward model, reason = { %s }", err)
 		}
 
-		// stats(X, y, y_)
-
+		//*
 		se, err := lossfuncs.SquaredError(y, y_)
 		if err != nil {
 			log.Fatalf("Failed to get SquaredError, reason { %s }", err)
 		}
-		// fmt.Printf("SquaredError:\n%s\n", se.TP().MustStringify())
 		fmt.Printf("MeanSquareError: %f\n", se.Sum()/float32(y_.Cols()))
 
-		/*
-			ce, err := lossfuncs.CrossEntropy(y, y_)
-			if err != nil {
-				log.Fatalf("Failed to get CrossEntropy Loss, reason { %s }", err)
-			}
-			// fmt.Printf("CrossEntropy:\n%s\n", ce.MustStringify())
-			fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(y_.Cols()))
-		*/
-
 		dse, err := lossfuncs.DSquaredError(y, y_)
+		if err != nil {
+			log.Fatalf("Failed to get DSquaredError, reason { %s }", err)
+		}
 		_, err = backward(modelLayers, dse)
+
+		/*/
+		ce, err := lossfuncs.CrossEntropy(y, y_)
+		if err != nil {
+			log.Fatalf("Failed to get CrossEntropy, reason { %s }", err)
+		}
+		fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(y_.Cols()))
+		dce, err := lossfuncs.DCrossEntropy(y, y_)
+		if err != nil {
+			log.Fatalf("Failed to get DCrossEntropy, reason { %s }", err)
+		}
+
+		_, err = backward(modelLayers, dce)
+		//*/
+
 		if err != nil {
 			log.Fatalf("Failed to get BackProp, reason { %s }", err)
 		}
@@ -76,7 +83,6 @@ func PerceptronDemo() {
 	}
 
 	stats(X, y, y_)
-
 }
 
 func updateWeights(model []layer.Layer[float32], alpha float32) error {
@@ -198,7 +204,7 @@ func createModel() []layer.Layer[float32] {
 
 func stats(X, y, y_ *mat.Mat2DF32) {
 	if X == nil || y == nil || y_ == nil {
-		fmt.Errorf(
+		log.Fatalf(
 			"Failed to print stats, nil parameters provided for "+
 				"stats(X == nil : %t , y == nil : %t , y_ == nil : %t)",
 			X == nil,

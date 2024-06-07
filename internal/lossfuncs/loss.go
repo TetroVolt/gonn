@@ -36,36 +36,24 @@ func CrossEntropy[T mat.Float](y, y_ *mat.Mat2D[T]) (*mat.Mat2D[T], error) {
 		)
 	}
 
-	logX := y_.Clone().Apply(
-		func(x T) T {
-			return T(math.Log(float64(x)))
-		},
-	)
+	/*
+		ce			= -((y)*log(y_) + (1-y)*log(1-y_))
+		dce/dy_		= -(y * 1 / y_ + (1-y)/(1-y_)*-1)
+					= -y/y_ + (1-y)/(1-y_)
+	*/
+	CE := mat.New2D[T](uint64(y.Rows()), uint64(y.Cols()))
+	for j := range CE.Rows() {
+		// jth training label
 
-	log1_X := y_.Clone().Apply(
-		func(x T) T {
-			return T(math.Log(float64(1 - x)))
-		},
-	)
+		for i := range CE.Rows() {
+			Y := y.MustGet(i, j)
+			Y_ := y_.MustGet(i, j)
 
-	CEY, err := mat.Mul(y, logX)
-	if err != nil {
-		return nil, err
+			val := Y*T(math.Log(float64(Y_))) + (1-Y)*T(math.Log(float64(1-Y_)))
+
+			CE.MustSet(i, j, -val)
+		}
 	}
-
-	CE1_Y, err := mat.Mul(
-		y.Clone().Apply(func(x T) T { return 1 - x }),
-		log1_X,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	CE, err := mat.Add(CEY, CE1_Y)
-	if err != nil {
-		return nil, err
-	}
-	CE.Scale(-1)
 
 	return CE, nil
 }
@@ -80,5 +68,25 @@ func DCrossEntropy[T mat.Float](y, y_ *mat.Mat2D[T]) (*mat.Mat2D[T], error) {
 		)
 	}
 
-	panic("DCrossEntropy not implemented yet.")
+	/*
+		ce			= -((y)*log(y_) + (1-y)*log(1-y_))
+		dce/dy_		= -(y * 1 / y_ + (1-y)/(1-y_)*-1)
+					= -y/y_ + (1-y)/(1-y_)
+	*/
+
+	dce := mat.New2D[T](uint64(y.Rows()), uint64(y.Cols()))
+
+	for j := range dce.Rows() {
+		// jth training label
+
+		for i := range dce.Rows() {
+			Y := y.MustGet(i, j)
+			Y_ := y_.MustGet(i, j)
+
+			val := -(Y / Y_) + (1-Y)/(1-Y_)
+			dce.MustSet(i, j, val)
+		}
+	}
+
+	return dce, nil
 }
