@@ -15,7 +15,8 @@ basic Neural Networks, backpropagation, and optimizer algorithms.
 
 ## Milestones
 
-- [ ] (WIP) Basic Matrix library 
+- [x] Basic Matrix library 
+- [x] Basic Perceptron XOR demo
 - [ ] (Not Started) Abtract graph NN module
 
 ## Running
