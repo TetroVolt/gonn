@@ -16,9 +16,9 @@ type LinearLayer[T mat.Float] struct {
 func NewLL[T mat.Float](iSize, oSize uint64) *LinearLayer[T] {
 	wrows, wcols := oSize, 1+iSize // for bias
 
-	W := mat.Rand[T](wrows, wcols).Apply(func(x T) T { return x*2 - 1 })
+	W := mat.Rand[T](wrows, wcols)
 
-	ll := LinearLayer[T]{
+	return &LinearLayer[T]{
 		W:     W,
 		WGrad: nil,
 
@@ -30,8 +30,6 @@ func NewLL[T mat.Float](iSize, oSize uint64) *LinearLayer[T] {
 			O: nil,
 		},
 	}
-
-	return &ll
 }
 
 func (ll *LinearLayer[T]) ISize() int64 {

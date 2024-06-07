@@ -34,7 +34,7 @@ func PerceptronDemo() {
 	fmt.Printf("y:\n%s\n", y.MustStringify())
 
 	const ALPHA = 0.1
-	for range 100000 {
+	for step := range 100000 {
 		y_, err := forward(modelLayers, X)
 		if err != nil {
 			log.Fatalf("Failed to forward model, reason = { %s }", err)
@@ -44,7 +44,10 @@ func PerceptronDemo() {
 		if err != nil {
 			log.Fatalf("Failed to get SquaredError, reason { %s }", err)
 		}
-		fmt.Printf("MeanSquareError: %f\n", se.Sum()/float32(y_.Cols()))
+
+		if step%1000 == 0 {
+			fmt.Printf("Step[%d] MSE: %f\n", step, se.Sum()/float32(y_.Cols()))
+		}
 
 		dse, err := lossfuncs.DSquaredError(y, y_)
 		if err != nil {
@@ -67,11 +70,6 @@ func PerceptronDemo() {
 	}
 
 	stats(X, y, y_)
-	ce, err := lossfuncs.CrossEntropy(y, y_)
-	if err != nil {
-		log.Fatalf("Failed to get CrossEntropy, reason { %s }", err)
-	}
-	fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(ce.Cols()))
 }
 
 func updateWeights(model []layer.Layer[float32], alpha float32) error {
@@ -169,11 +167,6 @@ func createModel() []layer.Layer[float32] {
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](2, 2),
-		layer.NewAL(
-			sigmoid,
-			dSigmoid,
-		),
 		layer.NewLL[float32](2, 1),
 		layer.NewAL(
 			sigmoid,
@@ -197,6 +190,7 @@ func stats(X, y, y_ *mat.Mat2DF32) {
 	}
 
 	yy_, err := mat.HCat(X.TP(), y.TP(), y_.TP())
+
 	if err != nil {
 		fmt.Printf(
 			"Error! Failed to HCat [X , y , y_]."+
