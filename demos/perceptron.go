@@ -33,8 +33,8 @@ func PerceptronDemo() {
 	fmt.Printf("X:\n%s\n", X.MustStringify())
 	fmt.Printf("y:\n%s\n", y.MustStringify())
 
-	const ALPHA = 0.001
-	for range 1000000 {
+	const ALPHA = 0.1
+	for range 100000 {
 		y_, err := forward(modelLayers, X)
 		if err != nil {
 			log.Fatalf("Failed to forward model, reason = { %s }", err)
@@ -58,7 +58,8 @@ func PerceptronDemo() {
 			fmt.Printf("MeanCrossEntropy: %f\n", ce.Sum()/float32(y_.Cols()))
 		*/
 
-		_, err = backward(modelLayers, se)
+		dse, err := lossfuncs.DSquaredError(y, y_)
+		_, err = backward(modelLayers, dse)
 		if err != nil {
 			log.Fatalf("Failed to get BackProp, reason { %s }", err)
 		}
@@ -170,22 +171,22 @@ func createModel() []layer.Layer[float32] {
 
 	// Instantiate Layers
 	modelLayers := []layer.Layer[float32]{
-		layer.NewLL[float32](2, 2),
+		layer.NewLL[float32](2, 4),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](2, 2),
+		layer.NewLL[float32](4, 4),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](2, 2),
+		layer.NewLL[float32](4, 4),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
 		),
-		layer.NewLL[float32](2, 1),
+		layer.NewLL[float32](4, 1),
 		layer.NewAL(
 			sigmoid,
 			dSigmoid,
