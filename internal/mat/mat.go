@@ -193,6 +193,24 @@ func Ones[T Float](rows, cols uint64) *Mat2D[T] {
 	return mat
 }
 
+func Id[T Float](length uint64) *Mat2D[T] { // identity matrix
+	mat := New2D[T](length, length)
+
+	for i := range int64(length) {
+		mat.MustSet(i, i, 1.0)
+	}
+
+	return mat
+}
+
+func Rand[T Float](rows, cols uint64) *Mat2D[T] {
+	mat := New2D[T](rows, cols)
+	mat.Apply(func(x T) T {
+		return T(rand.Float64())
+	})
+	return mat
+}
+
 func RandF32(rows, cols uint64) *Mat2DF32 {
 	mat := New2DF32(rows, cols)
 	for i := range len(mat.values) {
@@ -280,16 +298,6 @@ func (m *Mat2D[T]) String() string {
 		"%#v",
 		m,
 	)
-}
-
-func (m *Mat2D[T]) PrintMat() {
-	s, err := m.Stringify()
-	if err != nil {
-		log.Fatal(
-			fmt.Sprintf(
-				"Error! Unable to stringify matrix: %s", err))
-	}
-	fmt.Println(s)
 }
 
 func (m *Mat2D[T]) Scale(sc T) *Mat2D[T] {
@@ -462,6 +470,49 @@ func HCat[T Float](matrices ...(*Mat2D[T])) (*Mat2D[T], error) {
 	}
 
 	return res, nil
+}
+
+/*
+* Sum Rows
+*
+* Given an M by N matrix mat[M, N],
+* returns a new 1 by N matrix S[1, N] which is vector representing the sum of row vectors of mat
+**/
+func (mat *Mat2D[T]) SumRows() *Mat2D[T] {
+	sum := New2D[T](1, mat.cols)
+	for j := range mat.Cols() {
+		for i := range mat.Rows() {
+			val := sum.MustGet(0, j) + mat.MustGet(i, j)
+			sum.MustSet(0, j, val)
+		}
+	}
+	return sum
+}
+
+/*
+* Sum Cols
+* Given an M by N matrix mat[M, N],
+* returns an M by 1 matrix S[M, 1] which is the vector representing the sum of the column vectors of mat
+**/
+func (mat *Mat2D[T]) SumCols() *Mat2D[T] {
+	sum := New2D[T](mat.rows, 1)
+	for i := range mat.Rows() {
+		for j := range mat.Cols() {
+			val := sum.MustGet(i, 0) + mat.MustGet(i, j)
+			sum.MustSet(i, 0, val)
+		}
+	}
+	return sum
+}
+
+func (mat *Mat2D[T]) Sum() T {
+	var sum T = 0
+	for i := range mat.Rows() {
+		for j := range mat.Cols() {
+			sum += mat.MustGet(i, j)
+		}
+	}
+	return sum
 }
 
 // vvv PRIVATE vvv

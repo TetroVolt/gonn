@@ -6,6 +6,66 @@ import (
 	"testing"
 )
 
+func TestIdenRand(t *testing.T) {
+	mr := mat.Rand[float32](3, 3)
+	I := mat.Id[float32](3)
+
+	Imr, err := mat.Mul(I, mr)
+	if err != nil {
+		t.Fatal("Failed to multiply I x mr")
+	}
+
+	if !mat.Equals(mr, Imr) {
+		t.Errorf(
+			"Expected I x mr to equal: %s , found %s",
+			fmt.Sprintf("\n%s\n", mr.MustStringify()),
+			fmt.Sprintf("\n%s\n", Imr.MustStringify()),
+		)
+	}
+}
+
+func TestSums(t *testing.T) {
+	m0 := mat.FromValues([]float32{
+		1.0, 2.0, 3.0,
+		4.0, 5.0, 6.0,
+		7.0, 8.0, 9.0,
+	}).MustReshape(3, 3)
+
+	RS := m0.SumRows()
+	CS := m0.SumCols()
+	S := m0.Sum()
+
+	ERS := mat.FromValues([]float32{
+		12, 15, 18,
+	}).MustReshape(1, 3)
+
+	ECS := mat.FromValues([]float32{
+		6,
+		15,
+		24,
+	}).MustReshape(3, 1)
+
+	if !mat.Equals(ERS, RS) {
+		t.Errorf(
+			"Expected RowSum to equal: %s , found %s",
+			fmt.Sprintf("\n%s\n", ERS.MustStringify()),
+			fmt.Sprintf("\n%s\n", RS.MustStringify()),
+		)
+	}
+
+	if !mat.Equals(ECS, CS) {
+		t.Errorf(
+			"Expected ColSum to equal: %s , found %s",
+			fmt.Sprintf("\n%s\n", ECS.MustStringify()),
+			fmt.Sprintf("\n%s\n", CS.MustStringify()),
+		)
+	}
+
+	if S != 45 {
+		t.Errorf("Expected sum to be 45, found %f", S)
+	}
+}
+
 func TestApply(t *testing.T) {
 	m1 := mat.ARange[float32](9).MustReshape(3, 3)
 	m2 := m1.Clone()
