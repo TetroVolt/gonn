@@ -316,6 +316,34 @@ func (a *Mat2D[T]) Add(b *Mat2D[T]) error {
 	return nil
 }
 
+func (a *Mat2D[T]) MustSubtract(b *Mat2D[T]) *Mat2D[T] {
+	if err := subtract(a, a, b); err != nil {
+		log.Fatal(err)
+	}
+	return a
+}
+
+func (a *Mat2D[T]) Subtract(b *Mat2D[T]) error {
+	if err := subtract(a, a, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *Mat2D[T]) MustDot(b *Mat2D[T]) *Mat2D[T] {
+	if err := subtract(a, a, b); err != nil {
+		log.Fatal(err)
+	}
+	return a
+}
+
+func (a *Mat2D[T]) Dot(b *Mat2D[T]) error {
+	if err := dot(a, a, b); err != nil {
+		return err
+	}
+	return nil
+}
+
 func Equals[T Float](a, b *Mat2D[T]) bool {
 	if !DimsMatch(a, b) {
 		return false
@@ -335,6 +363,22 @@ func Equals[T Float](a, b *Mat2D[T]) bool {
 func Add[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
 	dst := New2D[T](a.rows, a.cols)
 	if err := add(dst, a, b); err != nil {
+		return nil, err
+	}
+	return dst, nil
+}
+
+func Subtract[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+	dst := New2D[T](a.rows, a.cols)
+	if err := subtract(dst, a, b); err != nil {
+		return nil, err
+	}
+	return dst, nil
+}
+
+func Dot[T Float](a, b *Mat2D[T]) (*Mat2D[T], error) {
+	dst := New2D[T](a.rows, a.cols)
+	if err := dot(dst, a, b); err != nil {
 		return nil, err
 	}
 	return dst, nil
@@ -597,20 +641,62 @@ func (m *Mat2D[T]) mustBeReshapeable(rows, cols uint64) error {
 	return nil
 }
 
+func subtract[T Float](dst, a, b *Mat2D[T]) error {
+	if err := validateDimsMatch(dst, a, b); err != nil {
+		return err
+	}
+
+	rows, cols := a.Rows(), a.Cols()
+
+	for i := range rows {
+		for j := range cols {
+			dst.Set(i, j, (a.MustGet(i, j) - b.MustGet(i, j)))
+		}
+	}
+
+	return nil
+}
+
 func add[T Float](dst, a, b *Mat2D[T]) error {
+	if err := validateDimsMatch(dst, a, b); err != nil {
+		return err
+	}
+
+	rows, cols := a.Rows(), a.Cols()
+
+	for i := range rows {
+		for j := range cols {
+			dst.Set(i, j, (a.MustGet(i, j) + b.MustGet(i, j)))
+		}
+	}
+
+	return nil
+}
+
+func dot[T Float](dst, a, b *Mat2D[T]) error {
+	if err := validateDimsMatch(dst, a, b); err != nil {
+		return err
+	}
+
+	rows, cols := a.Rows(), a.Cols()
+
+	for i := range rows {
+		for j := range cols {
+			dst.Set(i, j, (a.MustGet(i, j) * b.MustGet(i, j)))
+		}
+	}
+
+	return nil
+}
+
+func validateDimsMatch[T Float](dst, a, b *Mat2D[T]) error {
 	if !(DimsMatch(a, b) && DimsMatch(dst, a)) {
 		return fmt.Errorf(
-			"Mismatched dims dst%s = a%s + b%s",
+			"Mismatched dims dst%s = a%s - b%s",
 			dst.stringifyRowCol(),
 			a.stringifyRowCol(),
 			b.stringifyRowCol(),
 		)
-	}
-
-	for i := range a.Rows() {
-		for j := range a.Cols() {
-			dst.Set(i, j, (a.MustGet(i, j) + b.MustGet(i, j)))
-		}
 	}
 
 	return nil

@@ -307,8 +307,12 @@ func TestMatAdd(t *testing.T) {
 	m2 := mat.Ones[float32](2, 2)
 
 	m3 := mat.New2DF32(2, 2)
-	m3, err := mat.Add(m1, m2)
+	m3, err := mat.Add(m1, mat.Ones[float32](2, 1))
+	if err == nil {
+		t.Fatal("Expected error with mismatched dims, found nil")
+	}
 
+	m3, err = mat.Add(m1, m2)
 	if err != nil {
 		t.Fatalf("Error adding: %v\n", err)
 	}
@@ -318,7 +322,7 @@ func TestMatAdd(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 0, 1.0))
 	logIfErr(t, expectValueAt(m3, 1, 1, 1.0))
 
-	if err := m3.Add(m3); err != nil {
+	if err = m3.Add(m3); err != nil {
 		t.Fatal(err)
 	}
 	logIfErr(t, expectValueAt(m3, 0, 0, 2.0))
@@ -326,7 +330,7 @@ func TestMatAdd(t *testing.T) {
 	logIfErr(t, expectValueAt(m3, 1, 0, 2.0))
 	logIfErr(t, expectValueAt(m3, 1, 1, 2.0))
 
-	if err := m3.Add(m3); err != nil {
+	if err = m3.Add(m3); err != nil {
 		t.Fatal(err)
 	}
 	logIfErr(t, expectValueAt(m3, 0, 0, 4.0))
@@ -337,6 +341,83 @@ func TestMatAdd(t *testing.T) {
 	m4 := mat.New2DF32(2, 1)
 	if err := m3.Add(m4); err == nil {
 		t.Error("Expected error when adding matrices with mismatched dims, none found")
+	}
+}
+
+func TestMatSubtract(t *testing.T) {
+	m1 := mat.New2DF32(2, 2)
+	m2 := mat.Ones[float32](2, 2)
+
+	m3 := mat.New2DF32(2, 2)
+	m3, err := mat.Subtract(m1, m2)
+	if err != nil {
+		t.Fatalf("Error subtracting: %v\n", err)
+	}
+
+	logIfErr(t, expectValueAt(m3, 0, 0, -1.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, -1.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, -1.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, -1.0))
+
+	if err = m3.Subtract(
+		mat.ARange[float32](4).MustReshape(2, 2),
+	); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, -1.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, -2.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, -3.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, -4.0))
+
+	if err = m3.Subtract(m3); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, -0.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, -0.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, -0.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, -0.0))
+
+	m4 := mat.New2DF32(2, 1)
+	if err = m3.Subtract(m4); err == nil {
+		t.Error("Expected error when adding subtracting with mismatched dims, none found")
+	}
+}
+
+func TestMatDot(t *testing.T) {
+	m1 := mat.ARange[float32](4).MustReshape(2, 2)
+	m2 := mat.Ones[float32](2, 2).Scale(2)
+
+	m3 := mat.New2DF32(2, 2)
+
+	m3, err := mat.Dot(m1, m2)
+	if err != nil {
+		t.Fatalf("Error dotting: %v\n", err)
+	}
+
+	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 2.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 4.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 6.0))
+
+	if err := m3.Dot(m3); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 4.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 16.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 36.0))
+
+	if err := m3.Dot(m3); err != nil {
+		t.Fatal(err)
+	}
+	logIfErr(t, expectValueAt(m3, 0, 0, 0.0))
+	logIfErr(t, expectValueAt(m3, 0, 1, 16.0))
+	logIfErr(t, expectValueAt(m3, 1, 0, 256.0))
+	logIfErr(t, expectValueAt(m3, 1, 1, 36.0*36.0))
+
+	m4 := mat.New2DF32(2, 1)
+	if err := m3.Dot(m4); err == nil {
+		t.Error("Expected error when dotting matrices with mismatched dims, none found")
 	}
 }
 
@@ -381,6 +462,11 @@ func expectMatEq[T mat.Float](m1, m2 *mat.Mat2D[T]) error {
 }
 
 func expectValueAt[T mat.Float](m *mat.Mat2D[T], i, j int64, expected T) error {
+	if m == nil {
+		return fmt.Errorf(
+			"expectValueAt::Expected mat, found nil",
+		)
+	}
 	found, err := m.Get(i, j)
 
 	if err != nil || expected != found {
