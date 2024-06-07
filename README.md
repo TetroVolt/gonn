@@ -11,7 +11,9 @@ My primary motivation in writing this was to learn GO (I am still a novice in GO
 My goal was **NOT** to not build a performant production ready GO ML framework.
 
 This was written just for fun and to sanity check my understanding of
-basic Neural Networks, backpropagation, and optimizer algorithms.
+basic Neural Networks, backpropagation, and optimizer algorithms. 
+
+And to learn the basics about Go error handling, modules, and unit tests.
 
 ## Milestones
 
